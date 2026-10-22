@@ -6,7 +6,7 @@
 <key>CFBundleName</key><string>PunchrFinder</string>
 <key>CFBundlePackageType</key><string>XPC!</string>
 <key>CFBundleVersion</key><string>1</string>
-<key>CFBundleShortVersionString</key><string>0.1</string>
+<key>CFBundleShortVersionString</key><string>0.1.0</string>
 <key>LSMinimumSystemVersion</key><string>26.0</string>
 <key>NSExtension</key><dict><key>NSExtensionPointIdentifier</key><string>com.apple.FinderSync</string><key>NSExtensionPrincipalClass</key><string>PunchrFinder.FinderSync</string><key>NSExtensionAttributes</key><dict/></dict>
 </dict></plist>

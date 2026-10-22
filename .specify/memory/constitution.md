@@ -93,7 +93,7 @@ disk and attention is paid on every window the user opens.
 - **The real Finder by consent.** Registering or enabling the extension, restarting Finder, or
   writing onto a folder outside a scratch area happens only on Egildo's yes, each time.
 - **Findings are dated.** What a round measures goes into `notes/YYYY-MM-DD-<topic>.md`.
-- **Gate:** `./build.sh` builds clean before a branch lands.
+- **Gate:** `./build.sh` builds clean and `./build.sh check` passes before a branch lands.
 
 ## Governance
 
@@ -106,4 +106,4 @@ removing or redefining a principle, MINOR for adding a principle or section or m
 widening one, PATCH for wording. Exceptions to a principle are recorded in the plan's
 Complexity Tracking with the simpler alternative and why it fails.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-22 | **Last Amended**: 2026-10-22
+**Version**: 1.0.1 | **Ratified**: 2026-10-22 | **Last Amended**: 2026-10-22

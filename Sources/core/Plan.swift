@@ -81,3 +81,38 @@ func carryOut(_ plans: [FolderPlan]) -> [FolderPlan] {
     return p
   }
 }
+
+// Clear of `punch`: everything it owns goes, the rest stays.
+func planClear(_ path: String, _ punch: Punch) -> FolderPlan {
+  var p = FolderPlan(path: path)
+  let dress: Dress
+  do { dress = try readDress(path) } catch { p.error = "\(error)"; return p }
+  let entries = dress.entries.filter { !punch.ownedTags.contains(Tag(entry: $0).name) }
+  p.remove.tags = dress.tags.filter { punch.ownedTags.contains($0.name) }
+  if !p.remove.tags.isEmpty { p.entries = entries }
+  if punch.ownsStamp, let s = dress.stamp { p.remove.stamp = s; p.stamp = .remove }
+  if punch.ownsIcon && (dress.icon || FileManager.default.fileExists(atPath: iconFile(path))) {
+    p.remove.icon = true; p.icon = .remove
+  }
+  return p
+}
+
+// The look of `punch` the dress matches: everything the punch owns is exactly what the look puts there
+// (read-which-look-matches). `fork` gives a look's rendered icon; it is asked only when a folder has an icon.
+func match(_ dress: Dress, _ path: String, _ punch: Punch, fork: (Look) -> Data?) -> String? {
+  let owned = dress.tags.filter { punch.ownedTags.contains($0.name) }
+  for look in punch.looks.values.sorted(by: { $0.name < $1.name }) where !look.isBadge {
+    guard owned.count == look.tags.count, owned.allSatisfy(look.tags.contains) else { continue }
+    if punch.ownsStamp && dress.stamp != look.stamp { continue }
+    if punch.ownsIcon {
+      if look.icon == nil {
+        if dress.icon { continue }
+      } else {
+        let current = dress.icon ? (try? readIcon(path)) ?? nil : nil
+        if current == nil || current != fork(look) { continue }
+      }
+    }
+    return look.name
+  }
+  return nil
+}

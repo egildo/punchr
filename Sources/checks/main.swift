@@ -153,5 +153,61 @@ check("fail-per-folder, folders-only") {
   try expect(try attrs(target) == untouched, "the link was followed")
 }
 
+func clear(_ paths: [String], _ p: Punch) -> [FolderPlan] { carryOut(paths.map { planClear($0, p) }) }
+
+func matchOf(_ path: String, _ p: Punch) throws -> String? {
+  try match(readDress(path), path, p) { $0.icon.flatMap { try? iconFork($0) } }
+}
+
+check("read-which-look-matches, read-writes-nothing") {
+  let p = try punch("client", client)
+  let struck = folder(), other = folder(), bare = folder()
+  _ = try strike([struck], p, "zente")
+  try writeTags(other, ["client\n6"])
+  let before = try [struck, other, bare].map(attrs)
+  let m = try matchOf(struck, p)
+  try expect(m == "zente", "struck folder matches \(String(describing: m))")
+  try expect(try matchOf(other, p) == nil && matchOf(bare, p) == nil, "a folder matches a look it does not wear")
+  try expect(try [struck, other, bare].map(attrs) == before, "reading wrote")
+}
+
+check("read-a-thousand") {
+  let p = try punch("client", client)
+  let folders = (1...1000).map { _ in folder("many") }
+  for f in folders { try writeTags(f, ["client\n4"]) }
+  let start = Date()
+  for f in folders { try expect(try matchOf(f, p) == "plain", "\(f) does not match plain") }
+  let seconds = Date().timeIntervalSince(start)
+  try expect(seconds < 5, "\(seconds) s")
+  print("    1,000 folders read in \(String(format: "%.2f", seconds)) s")
+}
+
+check("strike-then-clear-restores") {
+  let p = try punch("client", client), f = folder()
+  try writeTags(f, ["red-team\n6"])
+  try setAttr(f, "org.example.note", Data("keep me".utf8))
+  let before = try attrs(f)
+  _ = try strike([f], p, "zente")
+  try expect(try attrs(f) != before, "the strike wrote nothing")
+  let plans = clear([f], p)
+  try expect(plans[0].error == nil, "\(plans[0].error!)")
+  let after = try attrs(f)
+  try expect(after == before, "attributes differ: \(after.keys.sorted())")
+  try expect(!fm.fileExists(atPath: iconFile(f)), "Icon\\r left behind")
+  try expect(!clear([f], p)[0].changes, "a second clear plans a change")
+}
+
+check("clear-one-keeps-the-others") {
+  let p = try punch("client", client)
+  let folders = (1...3).map { folder("trio\($0)") }
+  _ = try strike(folders, p, "zente")
+  _ = clear([folders[0]], p)
+  for f in folders.dropFirst() {
+    var st = stat(); lstat(iconFile(f), &st)
+    try expect(st.st_nlink == 2 && readDress(f).icon, "\(f): links \(st.st_nlink)")
+  }
+  try expect(try !readDress(folders[0]).icon, "the cleared folder kept its icon")
+}
+
 try? fm.removeItem(atPath: root)
 exit(failures == 0 ? 0 : 1)

@@ -87,11 +87,11 @@ look it matches.
 
 **Independent Test**: dress a scratch folder by hand in Finder, run `read`, compare with Finder.
 
-- [ ] T025 [US2] In `Sources/core/Plan.swift`, decide which look of a punch a folder matches, as `research.md` says: everything the punch owns on the folder is exactly what the look puts there, with the icon compared by fork bytes; badge looks never match (`read-which-look-matches`)
-- [ ] T026 [US2] In `Sources/app/main.swift`, wire `read`: load every `.json5` in the punch folder, report each folder's dress and matches as terminal lines or the JSON document of `contracts/cli.md`, folder by folder in the order given (`read-what-it-wears`, `read-answers-json`), writing nothing (`read-writes-nothing`)
-- [ ] T027 [P] [US2] In `Sources/checks/main.swift`, check `read-which-look-matches` and `read-writes-nothing`: a folder struck with a look matches it; a folder dressed with the same tag in another colour matches nothing; reading changes no attribute
-- [ ] T028 [P] [US2] In `Sources/checks/main.swift`, check `read-a-thousand`: reading 1,000 temporary folders takes under 5 seconds
-- [ ] T029 [US2] Run `./build.sh check`: every check so far passes
+- [x] T025 [US2] In `Sources/core/Plan.swift`, decide which look of a punch a folder matches, as `research.md` says: everything the punch owns on the folder is exactly what the look puts there, with the icon compared by fork bytes; badge looks never match (`read-which-look-matches`)
+- [x] T026 [US2] In `Sources/app/main.swift`, wire `read`: load every `.json5` in the punch folder, report each folder's dress and matches as terminal lines or the JSON document of `contracts/cli.md`, folder by folder in the order given (`read-what-it-wears`, `read-answers-json`), writing nothing (`read-writes-nothing`)
+- [x] T027 [P] [US2] In `Sources/checks/main.swift`, check `read-which-look-matches` and `read-writes-nothing`: a folder struck with a look matches it; a folder dressed with the same tag in another colour matches nothing; reading changes no attribute
+- [x] T028 [P] [US2] In `Sources/checks/main.swift`, check `read-a-thousand`: reading 1,000 temporary folders takes under 5 seconds
+- [x] T029 [US2] Run `./build.sh check`: every check so far passes
 
 **Checkpoint**: strike and read work on their own.
 
@@ -105,11 +105,11 @@ the same question as strike.
 **Independent Test**: strike a look on a scratch folder that already wears other tags, clear the
 punch, compare the folder with its state before the strike.
 
-- [ ] T030 [US3] In `Sources/core/Plan.swift`, compute the clear plan: remove every tag the punch owns; remove the stamp if it owns the stamp; remove the icon if it owns the icon (unlinking only this folder's `Icon\r`, `clear-one-keeps-the-others`)
-- [ ] T031 [US3] In `Sources/app/main.swift`, wire `clear` with the plan, the question `Clear? [y/N]`, `--force`, `--json` and the exit status of `contracts/cli.md`
-- [ ] T032 [P] [US3] In `Sources/checks/main.swift`, check `strike-then-clear-restores`: a folder with a foreign tag and foreign attributes, struck with a look using a tag, a stamp and an icon, then cleared, is byte for byte what it was, with no `Icon\r` left
-- [ ] T033 [P] [US3] In `Sources/checks/main.swift`, check `clear-one-keeps-the-others`: of three folders sharing one icon, clearing one leaves the other two with the icon and a link count of 2
-- [ ] T034 [US3] Run `./build.sh check`: every check passes
+- [x] T030 [US3] In `Sources/core/Plan.swift`, compute the clear plan: remove every tag the punch owns; remove the stamp if it owns the stamp; remove the icon if it owns the icon (unlinking only this folder's `Icon\r`, `clear-one-keeps-the-others`)
+- [x] T031 [US3] In `Sources/app/main.swift`, wire `clear` with the plan, the question `Clear? [y/N]`, `--force`, `--json` and the exit status of `contracts/cli.md`
+- [x] T032 [P] [US3] In `Sources/checks/main.swift`, check `strike-then-clear-restores`: a folder with a foreign tag and foreign attributes, struck with a look using a tag, a stamp and an icon, then cleared, is byte for byte what it was, with no `Icon\r` left
+- [x] T033 [P] [US3] In `Sources/checks/main.swift`, check `clear-one-keeps-the-others`: of three folders sharing one icon, clearing one leaves the other two with the icon and a link count of 2
+- [x] T034 [US3] Run `./build.sh check`: every check passes
 
 **Checkpoint**: all three verbs work.
 

@@ -87,8 +87,53 @@ case "strike":
   do { fork = try look.icon.map(iconFork) } catch { fail("\(error)") }
   let plans = args.dropFirst(3).map { planStrike($0, punch, look, fork: fork) }
   run("strike", ["punch": punch.name, "look": look.name], plans)
-case "read", "clear":
-  fail("\(args[0]) is not built yet")
+case "clear":
+  guard args.count >= 3 else { fail("clear needs a punch and at least one folder\n\(usage)") }
+  let punch = load(args[1])
+  run("clear", ["punch": punch.name], args.dropFirst(2).map { planClear($0, punch) })
+case "read":
+  guard args.count >= 2 else { fail("read needs at least one folder\n\(usage)") }
+  // Every punch in the punch folder; a broken one is reported and left out.
+  let files = ((try? FileManager.default.contentsOfDirectory(at: punchFolder, includingPropertiesForKeys: nil)) ?? [])
+    .filter { $0.pathExtension == "json5" }.sorted { $0.path < $1.path }
+  let punches = files.compactMap { url -> Punch? in
+    do { return try readPunch(url) } catch let r as Refused {
+      FileHandle.standardError.write(Data("punchr: punch \(url.path) refused, left out: \(r.problems.map { "\($0.at) \($0.problem)" }.joined(separator: "; "))\n".utf8))
+    } catch {}
+    return nil
+  }
+  var forks: [String: Data?] = [:] // a look's icon, rendered once, only when a folder has an icon
+  func fork(_ punch: Punch) -> (Look) -> Data? {
+    { look in
+      let key = "\(punch.name)/\(look.name)"
+      if forks[key] == nil { forks[key] = look.icon.flatMap { try? iconFork($0) } }
+      return forks[key]!
+    }
+  }
+  var failed = false, out: [[String: Any]] = []
+  for path in args.dropFirst() {
+    let dress: Dress
+    do { dress = try readDress(path) } catch {
+      failed = true
+      if json { out.append(["path": path, "error": "\(error)"]) } else { print("✗ \(error)") }
+      continue
+    }
+    let matches = punches.map { ($0.name, match(dress, path, $0, fork: fork($0))) }
+    if json {
+      out.append(["path": path, "wears": ["tags": dress.tags.map { ["name": $0.name, "colour": $0.colour.name] },
+                                         "stamp": stampJSON(dress.stamp), "icon": dress.icon],
+                  "matches": Dictionary(uniqueKeysWithValues: matches.map { ($0.0, $0.1 as Any? ?? NSNull()) })])
+    } else {
+      print(path)
+      for t in dress.tags { print("    tag \(t.name) (\(t.colour.name))") }
+      if let s = dress.stamp { print("    stamp \(s.text)") }
+      if dress.icon { print("    icon") }
+      if dress.tags.isEmpty && dress.stamp == nil && !dress.icon { print("    nothing") }
+      for (p, l) in matches { print("    \(p): \(l ?? "no look")") }
+    }
+  }
+  if json { emit(["folders": out]) }
+  exit(failed ? 1 : 0)
 default:
   print(usage)
   exit(args.isEmpty ? 0 : 2)

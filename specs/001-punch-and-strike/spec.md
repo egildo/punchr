@@ -149,6 +149,9 @@ punch, and compare the folder with its state before the strike.
   stamp and whether it has a custom icon.
 - **`read-which-look-matches`**: `read` MUST report, for each known punch, the look the folder
   matches, or none.
+- **`read-a-given-punch`**: Callers MUST be able to name the punches `read` matches against, by
+  name or path, in place of the punch folder (added after the first try in Finder, when reading
+  against a punch outside the punch folder needed a stand-in folder).
 - **`read-answers-json`**: `read`, `strike` and `clear` MUST answer `--json` with one document a
   program can parse, folder by folder, in the order given.
 - **`read-writes-nothing`**: `read` MUST NOT change anything on disk.

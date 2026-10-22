@@ -1,14 +1,16 @@
 # Contract: the `punchr` command
 
 ```
-punchr read <folder>...                        what each folder wears, and which look of each known punch it matches
+punchr read <folder>... [--punch <punch>]...  what each folder wears, and which look of each known punch it matches
 punchr strike <punch> <look> <folder>... [--force]   plan, then dress the folders in the look
 punchr clear <punch> <folder>... [--force]     plan, then remove what the punch owns
 ```
 
 Every verb also takes `--json`. `<punch>` is a name, looked up as `<name>.json5` in the punch
 folder, or a path (it contains `/` or ends in `.json5`). "Known punches", for `read`, are the
-`.json5` files in the punch folder.
+`.json5` files in the punch folder, or, when `--punch` is given (once or more), only those
+punches; a punch given with `--punch` that is refused stops `read` with status 2, while a broken
+punch in the punch folder is reported on standard error and left out.
 
 ## Writing, asking, stopping
 

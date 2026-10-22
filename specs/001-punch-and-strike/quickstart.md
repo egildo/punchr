@@ -58,7 +58,7 @@ Expected, within 5 seconds and without restarting Finder (`seen-without-restart`
 Then:
 
 ```sh
-build/punchr read /tmp/punchr-eye/a /tmp/punchr-eye/b
+build/punchr read /tmp/punchr-eye/a /tmp/punchr-eye/b --punch /tmp/punchr-eye/eye.json5
 build/punchr clear /tmp/punchr-eye/eye.json5 /tmp/punchr-eye/a /tmp/punchr-eye/b --force
 ```
 

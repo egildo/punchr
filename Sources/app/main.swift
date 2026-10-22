@@ -3,7 +3,7 @@ import Foundation
 
 let usage = """
   usage: punchr strike <punch> <look> <folder>... [--force] [--json]
-         punchr read <folder>... [--json]
+         punchr read <folder>... [--punch <punch>]... [--json]
          punchr clear <punch> <folder>... [--force] [--json]
   """
 
@@ -92,11 +92,17 @@ case "clear":
   let punch = load(args[1])
   run("clear", ["punch": punch.name], args.dropFirst(2).map { planClear($0, punch) })
 case "read":
-  guard args.count >= 2 else { fail("read needs at least one folder\n\(usage)") }
-  // Every punch in the punch folder; a broken one is reported and left out.
+  var folders = Array(args.dropFirst()), given: [String] = []
+  while let i = folders.firstIndex(of: "--punch") {
+    guard i + 1 < folders.count else { fail("--punch needs a punch name or path") }
+    given.append(folders[i + 1]); folders.removeSubrange(i...i + 1)
+  }
+  guard !folders.isEmpty else { fail("read needs at least one folder\n\(usage)") }
+  // The punches given with --punch (read-a-given-punch), or every punch in the punch folder,
+  // where a broken one is reported and left out.
   let files = ((try? FileManager.default.contentsOfDirectory(at: punchFolder, includingPropertiesForKeys: nil)) ?? [])
     .filter { $0.pathExtension == "json5" }.sorted { $0.path < $1.path }
-  let punches = files.compactMap { url -> Punch? in
+  let punches = !given.isEmpty ? given.map(load) : files.compactMap { url -> Punch? in
     do { return try readPunch(url) } catch let r as Refused {
       FileHandle.standardError.write(Data("punchr: punch \(url.path) refused, left out: \(r.problems.map { "\($0.at) \($0.problem)" }.joined(separator: "; "))\n".utf8))
     } catch {}
@@ -111,7 +117,7 @@ case "read":
     }
   }
   var failed = false, out: [[String: Any]] = []
-  for path in args.dropFirst() {
+  for path in folders {
     let dress: Dress
     do { dress = try readDress(path) } catch {
       failed = true

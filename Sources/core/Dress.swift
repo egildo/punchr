@@ -65,7 +65,10 @@ func readDress(_ path: String) throws -> Dress {
     d.stamp = obj?["sym"].map(Stamp.sym) ?? obj?["emoji"].map(Stamp.emoji)
       ?? .raw(String(decoding: data, as: UTF8.self))
   }
-  if let info = try getAttr(path, Attr.finderInfo), info.count > 8 { d.icon = info[info.startIndex + 8] & 0x04 != 0 }
+  // The custom-icon bit shows both the stamp and the icon; without it Finder draws a plain folder.
+  let bit = try getAttr(path, Attr.finderInfo).map { $0.count > 8 && $0[$0.startIndex + 8] & 0x04 != 0 } ?? false
+  if !bit { d.stamp = nil }
+  d.icon = bit && FileManager.default.fileExists(atPath: iconFile(path))
   return d
 }
 
@@ -75,6 +78,7 @@ func writeTags(_ path: String, _ entries: [String]) throws {
   try setAttr(path, Attr.tags, PropertyListSerialization.data(fromPropertyList: entries, format: .binary, options: 0))
 }
 
+// A stamp shows only with the custom-icon bit, which it shares with the icon: removing it keeps the bit for an icon.
 func writeStamp(_ path: String, _ stamp: Stamp?) throws {
   switch stamp {
   case nil: try removeAttr(path, Attr.stamp)
@@ -82,6 +86,7 @@ func writeStamp(_ path: String, _ stamp: Stamp?) throws {
   case .emoji(let s): try setAttr(path, Attr.stamp, JSONSerialization.data(withJSONObject: ["emoji": s]))
   case .raw(let s): try setAttr(path, Attr.stamp, Data(s.utf8))
   }
+  try setFinderBit(path, 0x04, stamp != nil || FileManager.default.fileExists(atPath: iconFile(path)))
 }
 
 // Sets or clears one bit of byte 8 of the Finder information, every other byte as found (set-only-the-icon-bit).

@@ -66,8 +66,9 @@ func putIcon(_ folder: String, _ fork: Data, _ shared: inout [dev_t: String]) th
 }
 
 // Unlinks only this folder's Icon\r; other folders sharing it keep theirs (clear-one-keeps-the-others).
+// The custom-icon bit stays when a stamp still needs it.
 func removeIcon(_ folder: String) throws {
   let f = iconFile(folder)
   if FileManager.default.fileExists(atPath: f) && unlink(f) < 0 { throw FolderError(f) }
-  try setFinderBit(folder, 0x04, false)
+  try setFinderBit(folder, 0x04, try getAttr(folder, Attr.stamp) != nil)
 }

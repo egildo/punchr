@@ -43,8 +43,12 @@ What a folder wears, read from its attributes; nothing else is consulted.
 | Part | Read from |
 |---|---|
 | tags, in order, each with its colour | `com.apple.metadata:_kMDItemUserTags` (a tag with no number reads as `none`) |
-| stamp | `com.apple.icon.folder#S` |
-| custom icon | the custom-icon bit (byte 8, `0x04`) of `com.apple.FinderInfo`, and the resource fork of the folder's `Icon\r` |
+| stamp | `com.apple.icon.folder#S`, worn only while the custom-icon bit is set |
+| custom icon | the custom-icon bit (byte 8, `0x04`) of `com.apple.FinderInfo` with an `Icon\r` in the folder, its resource fork compared for matching |
+
+The stamp and the icon share the custom-icon bit: setting either sets it, and removing one
+clears it only when the other is gone. A stamp written without the bit stays invisible (found
+by eye on 2026-10-22, as the findings had recorded).
 
 ## Plan
 

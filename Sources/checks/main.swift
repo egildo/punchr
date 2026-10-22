@@ -71,9 +71,19 @@ check("dress round trip, set-only-the-icon-bit") {
   try setFinderBit(f, 0x04, true)
   let d = try readDress(f)
   try expect(d.tags == [Tag(name: "a", colour: .red), Tag(name: "b", colour: .none)], "tags \(d.tags)")
-  try expect(d.stamp == .emoji("ZENTE") && d.icon, "stamp \(String(describing: d.stamp)), icon \(d.icon)")
+  try expect(d.stamp == .emoji("ZENTE") && !d.icon, "stamp \(String(describing: d.stamp)), icon \(d.icon)")
   try setFinderBit(f, 0x04, false)
   try expect(try getAttr(f, Attr.finderInfo) == info, "Finder information changed beyond the icon bit")
+}
+
+check("a stamp shows only with the custom-icon bit") {
+  let p = try punch("stamped", "{ owns: { tags: ['s'], stamp: true }, looks: { on: { stamp: { sym: 'star' } }, off: { tags: [{ s: 'red' }] } } }")
+  let f = folder()
+  _ = try strike([f], p, "on")
+  try expect(try getAttr(f, Attr.finderInfo).map { $0[8] & 0x04 != 0 } == true, "bit not set")
+  try expect(try readDress(f).stamp == .sym("star"), "stamp not read")
+  _ = try strike([f], p, "off")
+  try expect(try getAttr(f, Attr.finderInfo) == nil && getAttr(f, Attr.stamp) == nil, "stamp or bit left behind")
 }
 
 check("nothing-unowned-changes, keep-unowned-tags") {

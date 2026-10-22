@@ -2,6 +2,8 @@
 
 Swift, built with the Command Line Tools only (`./build.sh`, no Xcode). Read `README.md`, then the dated notes under `notes/`.
 
+Work is specified with Spec Kit (the `/speckit-*` skills): the engineering constitution is `.specify/memory/constitution.md` (still the blank template), and each feature gets its spec, plan and tasks under `specs/NNN-*/`.
+
 ## Working rules
 
 - Test badges and written looks on scratch folders only. Registering the extension, enabling it and restarting Finder touch the real Finder: ask Egildo first, each time.

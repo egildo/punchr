@@ -200,7 +200,8 @@ punch, and compare the folder with its state before the strike.
 - **`strike-then-clear-restores`**: A folder that wore nothing the punch owns, struck and then
   cleared, is byte for byte what it was before the strike.
 - **`icon-costs-kilobytes`**: A hundred folders on one volume wearing one icon look built from a
-  flat logo cost under 10 KB of disk for the icon, in total.
+  flat logo cost under 25 KB of disk for the icon, in total (amended from 10 KB by the plan:
+  see research, "Rendering the custom icon").
 - **`seen-without-restart`**: A struck look appears in an open Finder window within 5 seconds,
   without restarting Finder.
 - **`read-a-thousand`**: Reading 1,000 folders takes under 5 seconds.

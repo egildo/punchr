@@ -60,7 +60,8 @@ in [the findings](../../notes/2026-10-22-findings.md); they are not repeated her
 
 - **Decision**: within one `strike`, the first folder on each volume gets a real `Icon\r`; every
   other folder on the same volume (same device number) gets a hard link to it. A folder whose
-  `Icon\r` already holds exactly the bytes punchr would write is left alone.
+  `Icon\r` already holds exactly the bytes punchr would write is left alone, and serves as the
+  file the others in the same strike link to.
 - **Rationale**: the findings measured hard links working for Finder; the device number is the
   standard test for "same volume".
 - **Ceiling**: two separate strikes of the same look on one volume make two copies. A shared
@@ -101,15 +102,15 @@ in [the findings](../../notes/2026-10-22-findings.md); they are not repeated her
 - **Measured**: the Command Line Tools carry Swift Testing but no `xctest`; using Swift Testing
   without SwiftPM means linking test frameworks by hand. An assert program needs nothing.
 
-## Not yet measured, measured in the quickstart before the round lands
+## Measured by eye in Finder
 
-- Whether Finder shows a tag's colour when only the tag attribute is written, without the old
-  label bits in the Finder information. The findings saw Finder mirror the colour there when
-  Finder itself writes a tag. If the colour does not show, the label bits become part of what
-  a tag write owns, and the constitution's `set-only-the-icon-bit` example stays true for the
-  icon bit.
-- Whether a struck icon or stamp appears in an open Finder window within 5 seconds
-  (`seen-without-restart`), and whether `NSWorkspace.noteFileSystemChanged` is needed to make
-  it so.
+Both open points were settled on 2026-10-22, recorded in
+[the note](../../notes/2026-10-22-finder-by-eye.md):
 
-Both go into a dated note once measured.
+- A tag's colour and the folder's tint show from the tag attribute alone; the old label bits
+  are not needed.
+- Struck tags, stamps and icons appear in an open Finder window without restarting Finder and
+  without any nudge from punchr.
+
+The same look found a mistake: a stamp shows only with the custom-icon bit, which the first
+build did not set. The stamp and the icon now share that bit (see the data model).

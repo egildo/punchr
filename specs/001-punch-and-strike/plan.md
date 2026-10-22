@@ -48,7 +48,7 @@ plan from 10 KB, see research).
 | Blind to its callers | Pass: the spec names no caller's logic. | Pass: no git or tabularium in code; tabularium appears only in documents. |
 | Moving state stays off disk | Pass: badge looks are refused by `strike`. | Pass: `badge-looks-are-not-struck`; no attribute records a state. |
 | Touch only what the punch owns | Pass: `owns`, plan first, colour number written. | Pass: the plan is computed from owned parts only; the icon bit is set alone; no extra attribute is written to remember a look (research, "Knowing which look a folder wears"). |
-| Finder's own doors | Pass: tags, stamp and icon formats are in the findings. | Pass, with one open measurement: whether a tag's colour shows without the old label bits, and whether Finder refreshes on its own. Both are measured in the quickstart and written into a dated note before the round lands. |
+| Finder's own doors | Pass: tags, stamp and icon formats are in the findings. | Pass: the two open points (a tag's colour without the old label bits, Finder refreshing on its own) were measured by eye and recorded in `notes/2026-10-22-finder-by-eye.md`. |
 | Lean | Pass. | Pass: JSON5 through Foundation instead of a YAML package; arguments parsed by hand; the app's executable is the command; two icon sizes; one icon file per volume. The palette-PNG encoder that would bring the icon from about 20 KB to 5 KB is parked. |
 
 No exception to record.

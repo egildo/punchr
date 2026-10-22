@@ -7,7 +7,7 @@ Work is specified with Spec Kit (the `/speckit-*` skills): the engineering const
 ## Working rules
 
 - Test badges and written looks on scratch folders only. Registering the extension, enabling it and restarting Finder touch the real Finder: ask Egildo first, each time.
-- Gate before a merge: `./build.sh` builds clean.
+- Gate before a merge: `./build.sh` builds clean and `./build.sh check` passes.
 - Rounds go on a branch named `<topic>-round`, merged into `main` with a merge commit (`--no-ff`), the branch deleted after.
 - Commit messages end with the model's `Co-Authored-By: Claude … <noreply@anthropic.com>` line.
 - Findings go in dated notes, `notes/YYYY-MM-DD-<topic>.md`.

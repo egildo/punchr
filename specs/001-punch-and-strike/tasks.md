@@ -117,9 +117,9 @@ punch, compare the folder with its state before the strike.
 
 ## Phase 6: Polish
 
-- [ ] T035 Update `README.md`: what a punch is with the example from `contracts/cli.md`, the three verbs, `./build.sh check`, and the note to add `Icon?` to the global gitignore
-- [ ] T036 With Egildo, run section 2 of `quickstart.md` in Finder (`seen-without-restart`, and whether a tag's colour shows without the label bits); write what is seen into `notes/2026-10-22-finder-by-eye.md` (or the day it happens); if the colour does not show, amend the spec and `Sources/core/Dress.swift` before the round lands
-- [ ] T037 Gate: `./build.sh` and `./build.sh check` both clean; read the spec, plan, contract and code against each other before merging `punch-and-strike-round` into `main` with `--no-ff`
+- [x] T035 Update `README.md`: what a punch is with the example from `contracts/cli.md`, the three verbs, `./build.sh check`, and the note to add `Icon?` to the global gitignore
+- [x] T036 With Egildo, run section 2 of `quickstart.md` in Finder (`seen-without-restart`, and whether a tag's colour shows without the label bits); write what is seen into `notes/2026-10-22-finder-by-eye.md` (or the day it happens); if the colour does not show, amend the spec and `Sources/core/Dress.swift` before the round lands
+- [x] T037 Gate: `./build.sh` and `./build.sh check` both clean; read the spec, plan, contract and code against each other before merging `punch-and-strike-round` into `main` with `--no-ff`
 
 ---
 

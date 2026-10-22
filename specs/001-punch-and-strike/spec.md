@@ -65,8 +65,9 @@ compare with what Finder shows.
 
 **Acceptance Scenarios**:
 
-1. **Given** a folder dressed by hand in Finder with a yellow tag, **When** the user reads it,
-   **Then** punchr reports the tag and its colour, and that it matches no look.
+1. **Given** a folder dressed by hand in Finder with a tag, **When** the user reads it,
+   **Then** punchr reports the tag, with the colour number Finder wrote for it, and that it
+   matches no look.
 2. **Given** a folder struck with the look `zente`, **When** the user reads it, **Then** punchr
    reports that it matches `client` / `zente`.
 3. **Given** `--json`, **When** the user reads several folders, **Then** the output is one JSON
@@ -117,6 +118,9 @@ punch, and compare the folder with its state before the strike.
 - The folder is inside a git repository and gets a custom icon: the hidden icon file shows up as
   untracked in git. punchr does not change any gitignore; the README says to add `Icon?` to the
   global one.
+- A tag set from Finder's colour menu (such as "Giallo") is written without a colour number;
+  Finder takes its colour from the user's own tag list, which punchr does not read. `read`
+  reports such a tag as `none`, and a look that names it with a colour does not match it.
 - Finder is showing the folder while it is struck: the new look appears without restarting
   Finder.
 
@@ -217,8 +221,7 @@ punch, and compare the folder with its state before the strike.
   sync show a plain folder.
 - The user's punch folder is `~/.config/punchr/`, beside tabularium's `~/.config/tabularium/`; a
   name on the command line means the punch file of that name there.
-- The punch file format (likely YAML, as sketched in the findings) is settled in the plan, not
-  here.
+- The punch file format is settled in the plan: JSON5, read by the system's own decoder.
 - Finder comments are out of scope: where they are stored was measured, but writing one that
   Finder shows was not.
 - Folder window options (view style, background, icon positions) are out of scope.

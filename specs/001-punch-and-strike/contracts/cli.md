@@ -34,7 +34,7 @@ Nothing is ever written when the punch is refused or the look is unknown or a ba
 
 One line per folder, marked as the sibling tools mark them: `✓` done or nothing to do, `✗`
 failed, `·` planned and not written. Plan lines show `+ tag client (grey)`, `− tag ahead`,
-`+ stamp arrow.triangle.branch`, `+ icon`, `− icon`. Problems in a punch are listed one per
+`+ stamp sym arrow.triangle.branch`, `+ icon`, `− icon`. Problems in a punch are listed one per
 line with their path in the file, then the command stops.
 
 ## JSON output

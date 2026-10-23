@@ -1,4 +1,4 @@
-# Struck looks in Finder, by eye (2026-10-22)
+# Written looks in Finder, by eye (2026-10-22)
 
 Egildo watched an open Finder window on `/tmp/punchr-eye` while `punchr strike` dressed two
 scratch folders, macOS 26.6.2. Finder was never restarted.

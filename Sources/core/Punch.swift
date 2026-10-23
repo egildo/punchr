@@ -33,6 +33,7 @@ struct Look {
   let tags: [Tag]
   let stamp: Stamp?
   let icon: URL?
+  let comment: String?
   let isBadge: Bool
 }
 
@@ -41,6 +42,7 @@ struct Punch {
   let ownedTags: Set<String>
   let ownsStamp: Bool
   let ownsIcon: Bool
+  let ownsComment: Bool
   let looks: [String: Look]
 }
 
@@ -85,7 +87,7 @@ func readPunch(_ url: URL) throws -> Punch {
 
   let owns = top["owns"] as? [String: Any] ?? [:]
   if top["owns"] != nil && top["owns"] as? [String: Any] == nil { problem("owns", "must be an object") }
-  unknownKeys(owns, ["tags", "stamp", "icon"], "owns")
+  unknownKeys(owns, ["tags", "stamp", "icon", "comment"], "owns")
   let ownedTags = owns["tags"] as? [String] ?? []
   if owns["tags"] != nil && owns["tags"] as? [String] == nil { problem("owns.tags", "must be a list of tag names") }
   func flag(_ k: String) -> Bool {
@@ -93,7 +95,7 @@ func readPunch(_ url: URL) throws -> Punch {
     guard let b = v as? Bool else { problem("owns.\(k)", "must be true or false"); return false }
     return b
   }
-  let ownsStamp = flag("stamp"), ownsIcon = flag("icon")
+  let ownsStamp = flag("stamp"), ownsIcon = flag("icon"), ownsComment = flag("comment")
 
   var looks: [String: Look] = [:]
   guard let rawLooks = top["looks"] as? [String: Any], !rawLooks.isEmpty else {
@@ -103,7 +105,7 @@ func readPunch(_ url: URL) throws -> Punch {
   for name in rawLooks.keys.sorted() {
     let at = "looks.\(name)"
     guard let l = rawLooks[name] as? [String: Any] else { problem(at, "must be an object"); continue }
-    unknownKeys(l, ["tags", "stamp", "icon", "badge"], at)
+    unknownKeys(l, ["tags", "stamp", "icon", "comment", "badge"], at)
 
     var tags: [Tag] = []
     if let v = l["tags"] {
@@ -141,18 +143,27 @@ func readPunch(_ url: URL) throws -> Punch {
       if !ownsIcon { problem("\(at).icon", "the punch does not own the icon (owns.icon)") }
     }
 
+    var comment: String?
+    if let v = l["comment"] {
+      if let text = v as? String, !text.isEmpty { comment = text } else { problem("\(at).comment", "must be text, not empty") }
+      if !ownsComment { problem("\(at).comment", "the punch does not own the comment (owns.comment)") }
+    }
+
     let isBadge = l["badge"] != nil
     if isBadge && l["badge"] as? String == nil { problem("\(at).badge", "must be a path") }
-    if isBadge && (l["tags"] != nil || l["stamp"] != nil || l["icon"] != nil) {
-      problem(at, "a badge look has no written parts")
-    }
-    if !isBadge && l["tags"] == nil && l["stamp"] == nil && l["icon"] == nil {
-      problem(at, "a written look needs tags, a stamp or an icon")
-    }
-    looks[name] = Look(name: name, tags: tags, stamp: stamp, icon: icon, isBadge: isBadge)
+    let written = ["tags", "stamp", "icon", "comment"].contains { l[$0] != nil }
+    if isBadge && written { problem(at, "a badge look has no written parts") }
+    if !isBadge && !written { problem(at, "a written look needs tags, a stamp, an icon or a comment") }
+    looks[name] = Look(name: name, tags: tags, stamp: stamp, icon: icon, comment: comment, isBadge: isBadge)
   }
 
   if !problems.isEmpty { throw Refused(problems: problems) }
   return Punch(name: url.deletingPathExtension().lastPathComponent, ownedTags: Set(ownedTags),
-               ownsStamp: ownsStamp, ownsIcon: ownsIcon, looks: looks)
+               ownsStamp: ownsStamp, ownsIcon: ownsIcon, ownsComment: ownsComment, looks: looks)
+}
+
+// Under --live a punch may own only live parts: the comment, and badges once they exist (live-owns-only-comments).
+func liveProblems(_ p: Punch) -> [Problem] {
+  [("owns.tags", !p.ownedTags.isEmpty), ("owns.stamp", p.ownsStamp), ("owns.icon", p.ownsIcon)]
+    .filter(\.1).map { Problem(at: $0.0, problem: "a live punch owns only comments") }
 }

@@ -19,8 +19,8 @@ promise, and punchr enforce, that a punch writes nothing but live parts.
 
 ### User Story 1 - Strike a comment (Priority: P1)
 
-A punch `state` owns the comment and has looks `ahead` (`comment: 'AHEAD'`) and `clean` (no
-comment). Tabularium runs `punchr strike state ahead <folders…>`: the plan shows
+A punch `state` owns the comment and has looks `ahead` (`comment: 'AHEAD'`) and `behind`
+(`comment: 'BEHIND'`). Tabularium runs `punchr strike state ahead <folders…>`: the plan shows
 `+ comment AHEAD`, and after the strike the folders show AHEAD in the Comments column of a
 Finder list view at once, without restarting Finder.
 
@@ -33,8 +33,8 @@ Finder list view at once, without restarting Finder.
 2. **Given** a folder with a comment written by hand in Get Info, **When** a look of a punch
    that owns the comment is struck, **Then** the plan shows the hand-written comment going,
    marked as not this punch's, and the look's comment replaces it.
-3. **Given** a folder wearing `ahead`, **When** `clean` is struck or the punch is cleared,
-   **Then** the comment is removed.
+3. **Given** a folder wearing `ahead`, **When** `behind` is struck, **Then** BEHIND replaces
+   AHEAD; **When** the punch is cleared, **Then** the comment is removed.
 4. **Given** a folder wearing `ahead`, **When** `ahead` is struck again, **Then** nothing is
    planned and nothing written.
 

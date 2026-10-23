@@ -6,6 +6,7 @@ enum Attr {
   static let stamp = "com.apple.icon.folder#S"
   static let finderInfo = "com.apple.FinderInfo"
   static let fork = "com.apple.ResourceFork"
+  static let comment = "com.apple.metadata:kMDItemFinderComment"
 }
 
 struct FolderError: Error, CustomStringConvertible {
@@ -51,6 +52,7 @@ struct Dress: Equatable {
   var entries: [String] = [] // the tags as Finder wrote them, "name\nN" or "name"
   var stamp: Stamp?
   var icon = false
+  var comment: String?
   var tags: [Tag] { entries.map(Tag.init(entry:)) }
 }
 
@@ -69,7 +71,29 @@ func readDress(_ path: String) throws -> Dress {
   let bit = try getAttr(path, Attr.finderInfo).map { $0.count > 8 && $0[$0.startIndex + 8] & 0x04 != 0 } ?? false
   if !bit { d.stamp = nil }
   d.icon = bit && FileManager.default.fileExists(atPath: iconFile(path))
+  if let data = try getAttr(path, Attr.comment) {
+    let text = (try? PropertyListSerialization.propertyList(from: data, format: nil)) as? String
+    d.comment = text?.isEmpty == false ? text : nil
+  }
   return d
+}
+
+// Sets the comment through Finder itself, so it lands in the attribute and in the parent's .DS_Store and Finder
+// shows it at once; nil removes it, and the empty attribute Finder leaves behind (notes/2026-10-23-comments.md).
+func writeComment(_ path: String, _ text: String?) throws {
+  func literal(_ s: String) -> String {
+    "\"" + s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
+  }
+  let full = URL(fileURLWithPath: path).path
+  let source = "tell application \"Finder\" to set comment of (POSIX file \(literal(full)) as alias) to \(literal(text ?? ""))"
+  var error: NSDictionary?
+  if NSAppleScript(source: source)?.executeAndReturnError(&error) == nil {
+    let n = error?[NSAppleScript.errorNumber] as? Int ?? 0
+    throw FolderError(path, n == -1743
+      ? "macOS does not let punchr control Finder: allow it in System Settings → Privacy & Security → Automation"
+      : "Finder could not set the comment (\(n)): \(error?[NSAppleScript.errorMessage] ?? "")")
+  }
+  if text == nil { try removeAttr(path, Attr.comment) }
 }
 
 // Every tag written carries its colour number (write-the-colour-number); the caller passes entries it keeps as found.

@@ -2,8 +2,8 @@
 
 ```
 punchr read <folder>... [--punch <punch>]...  what each folder wears, and which look of each known punch it matches
-punchr strike <punch> <look> <folder>... [--force]   plan, then dress the folders in the look
-punchr clear <punch> <folder>... [--force]     plan, then remove what the punch owns
+punchr strike <punch> <look> <folder>... [--force] [--live]   plan, then dress the folders in the look
+punchr clear <punch> <folder>... [--force] [--live]     plan, then remove what the punch owns
 ```
 
 Every verb also takes `--json`. `<punch>` is a name, looked up as `<name>.json5` in the punch
@@ -22,19 +22,28 @@ punch in the punch folder is reported on standard error and left out.
 
 Nothing is ever written when the punch is refused or the look is unknown or a badge look.
 
+## `--live`
+
+The caller's promise that the look follows a state. With it, `strike` and `clear` refuse a punch
+that owns tags, a stamp or an icon, before reading any folder: status 2, one problem for each
+(`owns.tags`, `owns.stamp`, `owns.icon`), each `a live punch owns only comments`. A punch that
+owns only the comment runs as without the flag. `read` takes no `--live`.
+
 ## Exit status
 
 | Status | Meaning |
 |---|---|
 | 0 | every folder read or written, or the plan stopped as above |
 | 1 | at least one folder failed (and is named in the output) |
-| 2 | wrong arguments, punch refused, look unknown, or a badge look given to `strike` |
+| 2 | wrong arguments, punch refused (also under `--live`), look unknown, or a badge look given to `strike` |
 
 ## Terminal output
 
 One line per folder, marked as the sibling tools mark them: `✓` done or nothing to do, `✗`
 failed, `·` planned and not written. Plan lines show `+ tag client (grey)`, `− tag ahead`,
-`+ stamp sym arrow.triangle.branch`, `+ icon`, `− icon`. Problems in a punch are listed one per
+`+ stamp sym arrow.triangle.branch`, `+ icon`, `− icon`, `+ comment AHEAD`, `− comment AHEAD`;
+a removed comment that no look of the punch writes reads `− comment <text> (not this punch's)`.
+`read` shows `comment <text>`. Problems in a punch are listed one per
 line with their path in the file, then the command stops.
 
 ## JSON output
@@ -49,7 +58,8 @@ line with their path in the file, then the command stops.
       "wears": {
         "tags": [{ "name": "client", "colour": "grey" }],
         "stamp": null,
-        "icon": true
+        "icon": true,
+        "comment": "AHEAD"
       },
       "matches": { "client": "zente", "repository": null }
     },
@@ -68,26 +78,28 @@ line with their path in the file, then the command stops.
   "folders": [
     {
       "path": "Projects/zente",
-      "add": { "tags": [{ "name": "client", "colour": "grey" }], "stamp": null, "icon": true },
-      "remove": { "tags": [], "stamp": null, "icon": false },
-      "keep": { "tags": [], "stamp": null, "icon": false }
+      "add": { "tags": [{ "name": "client", "colour": "grey" }], "stamp": null, "icon": true, "comment": null },
+      "remove": { "tags": [], "stamp": null, "icon": false, "comment": "my own note" },
+      "keep": { "tags": [], "stamp": null, "icon": false, "comment": null }
     }
   ]
 }
 ```
 
-`look` is absent for `clear`. `stamp` is `null` or `{ "sym": … }` / `{ "emoji": … }`. A refused
-punch answers `{ "problems": [{ "at": "looks.zente.tags[1]", "problem": "…" }] }` with status 2.
+`look` is absent for `clear`. `stamp` is `null` or `{ "sym": … }` / `{ "emoji": … }`. `comment`
+is the text or `null`; it was added in 0.2.0, beside keys that did not change. A refused
+punch answers `{ "problems": [{ "at": "looks.zente.tags[1]", "problem": "…" }] }` with status 2;
+under `--live`, `{ "problems": [{ "at": "owns.tags", "problem": "a live punch owns only comments" }] }`.
 
 ## An example punch
 
 ```json5
 // ~/.config/punchr/client.json5
 {
-  owns: { tags: ['client'], stamp: true, icon: true },
+  owns: { tags: ['client'], stamp: true, icon: true, comment: true },
   looks: {
     zente: { tags: [{ client: 'grey' }], icon: 'logos/zente.svg' },
-    acme:  { tags: [{ client: 'grey' }], stamp: { emoji: 'ACME' } },
+    acme:  { tags: [{ client: 'grey' }], stamp: { emoji: 'ACME' }, comment: 'ACME, since 2024' },
     ahead: { badge: 'badges/ahead.svg' }, // drawn live, by a later feature
   },
 }

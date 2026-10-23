@@ -6,7 +6,8 @@ struct Parts: Equatable {
   var tags: [Tag] = []
   var stamp: Stamp?
   var icon = false
-  var isEmpty: Bool { tags.isEmpty && stamp == nil && !icon }
+  var comment: String?
+  var isEmpty: Bool { tags.isEmpty && stamp == nil && !icon && comment == nil }
 }
 
 enum Action<T: Equatable>: Equatable { case leave, set(T), remove }
@@ -17,6 +18,7 @@ struct FolderPlan {
   var entries: [String]? // the folder's whole new tag list, when its tags change
   var stamp: Action<Stamp> = .leave
   var icon: Action<Data> = .leave // the resource fork to write
+  var comment: Action<String> = .leave
   var error: String?
   var changes: Bool { !add.isEmpty || !remove.isEmpty }
 }
@@ -61,6 +63,15 @@ func planStrike(_ path: String, _ punch: Punch, _ look: Look, fork: Data?) -> Fo
       p.icon = .remove
     }
   }
+
+  // The punch owns the comment whole: one written by hand goes too (own-the-comment-whole).
+  if punch.ownsComment {
+    if dress.comment == look.comment { p.keep.comment = look.comment } else {
+      p.remove.comment = dress.comment
+      p.add.comment = look.comment
+      p.comment = look.comment.map(Action.set) ?? .remove
+    }
+  }
   return p
 }
 
@@ -77,6 +88,7 @@ func carryOut(_ plans: [FolderPlan]) -> [FolderPlan] {
       if let entries = p.entries { try writeTags(p.path, entries) }
       switch p.stamp { case .leave: break; case .set(let s): try writeStamp(p.path, s); case .remove: try writeStamp(p.path, nil) }
       switch p.icon { case .leave: break; case .set(let fork): try putIcon(p.path, fork, &shared); case .remove: try removeIcon(p.path) }
+      switch p.comment { case .leave: break; case .set(let c): try writeComment(p.path, c); case .remove: try writeComment(p.path, nil) }
     } catch { p.error = "\(error)" }
     return p
   }
@@ -94,6 +106,7 @@ func planClear(_ path: String, _ punch: Punch) -> FolderPlan {
   if punch.ownsIcon && (dress.icon || FileManager.default.fileExists(atPath: iconFile(path))) {
     p.remove.icon = true; p.icon = .remove
   }
+  if punch.ownsComment, let c = dress.comment { p.remove.comment = c; p.comment = .remove }
   return p
 }
 
@@ -104,6 +117,7 @@ func match(_ dress: Dress, _ path: String, _ punch: Punch, fork: (Look) -> Data?
   for look in punch.looks.values.sorted(by: { $0.name < $1.name }) where !look.isBadge {
     guard owned.count == look.tags.count, owned.allSatisfy(look.tags.contains) else { continue }
     if punch.ownsStamp && dress.stamp != look.stamp { continue }
+    if punch.ownsComment && dress.comment != look.comment { continue }
     if punch.ownsIcon {
       if look.icon == nil {
         if dress.icon { continue }

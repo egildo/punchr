@@ -40,12 +40,14 @@ func strike(_ paths: [String], _ p: Punch, _ look: String) throws -> [FolderPlan
   return carryOut(paths.map { planStrike($0, p, l, fork: fork) })
 }
 
+// Quotes, a backslash, an accent (Finder stores it decomposed) and a line break, as JSON5 source.
+let zenteComment = #"Zente "client" \\ caffè\ntwo"#
 let standin = URL(fileURLWithPath: "experiments/standin.svg").path
 let client = """
   {
-    owns: { tags: ['client', 'done'], stamp: true, icon: true },
+    owns: { tags: ['client', 'done'], stamp: true, icon: true, comment: true },
     looks: {
-      zente: { tags: [{ client: 'grey' }], stamp: { sym: 'star' }, icon: '\(standin)' },
+      zente: { tags: [{ client: 'grey' }], stamp: { sym: 'star' }, icon: '\(standin)', comment: '\(zenteComment)' },
       plain: { tags: [{ client: 'blue' }] },
       ahead: { badge: 'ahead.svg' },
     },
@@ -109,6 +111,7 @@ check("plan-matches-write, strike-twice-changes-nothing") {
   let d = try readDress(f)
   try expect(d.entries == plan.entries, "tags \(d.entries), planned \(String(describing: plan.entries))")
   try expect(d.stamp == plan.add.stamp && d.icon == plan.add.icon, "stamp or icon not as planned")
+  try expect(d.comment == "Zente \"client\" \\ caffè\ntwo" && d.comment == plan.add.comment, "comment \(d.comment ?? "none")")
   let before = try attrs(f), icon = try attrs(iconFile(f))
   let again = try strike([f], p, "zente")
   try expect(!again[0].changes, "second plan not empty: \(again[0].add) \(again[0].remove)")
@@ -120,7 +123,7 @@ check("one-look-per-punch") {
   _ = try strike([f], p, "zente")
   _ = try strike([f], p, "plain")
   let d = try readDress(f)
-  try expect(d.entries == ["client\n4"] && d.stamp == nil && !d.icon, "dress \(d)")
+  try expect(d.entries == ["client\n4"] && d.stamp == nil && !d.icon && d.comment == nil, "dress \(d)")
   try expect(!fm.fileExists(atPath: iconFile(f)), "Icon\\r left behind")
 }
 
@@ -151,6 +154,54 @@ check("fail-per-folder, folders-only") {
   try expect(failed == [file, link, locked], "failed \(failed)")
   for g in good { try expect(try readDress(g).entries == ["client\n4"], "\(g) not struck") }
   try expect(try attrs(target) == untouched, "the link was followed")
+}
+
+// What Finder itself shows as the folder's comment.
+func finderComment(_ path: String) throws -> String {
+  var error: NSDictionary?
+  let r = NSAppleScript(source: "tell application \"Finder\" to get comment of (POSIX file \"\(path)\" as alias)")?
+    .executeAndReturnError(&error)
+  guard let text = r?.stringValue else { throw CheckFailed(description: "Finder: \(error ?? [:])") }
+  return text
+}
+
+check("own-the-comment-whole, write-the-comment-through-finder") {
+  let p = try punch("client", client), f = folder()
+  try writeComment(f, "by hand")
+  try expect(try readDress(f).comment == "by hand", "hand-written comment not read")
+  let plan = planStrike(f, p, p.looks["plain"]!, fork: nil)
+  try expect(plan.remove.comment == "by hand" && plan.add.comment == nil && plan.comment == .remove, "plan \(plan.remove)")
+  _ = carryOut([plan])
+  try expect(try getAttr(f, Attr.comment) == nil, "an empty comment attribute left behind")
+  try expect(try finderComment(f) == "", "Finder still shows a comment")
+  _ = try strike([f], p, "zente")
+  let shown = try finderComment(f)
+  try expect(shown == "Zente \"client\" \\ caffè\ntwo", "Finder shows \(shown)")
+  try expect(fm.fileExists(atPath: "\(root)/.DS_Store"), "no .DS_Store: not written through Finder")
+}
+
+check("live-owns-only-comments") {
+  let p = try punch("client", client)
+  try expect(liveProblems(p).map(\.at) == ["owns.tags", "owns.stamp", "owns.icon"], "\(liveProblems(p).map(\.at))")
+  let state = try punch("state", "{ owns: { comment: true }, looks: { ahead: { comment: 'AHEAD' }, clean: { comment: 'CLEAN' } } }")
+  try expect(liveProblems(state).isEmpty, "a comments-only punch refused")
+  do {
+    _ = try punch("nocomment", "{ owns: { stamp: true }, looks: { a: { comment: '' }, b: { stamp: { sym: 'star' }, comment: 'x' } } }")
+    throw CheckFailed(description: "accepted")
+  } catch let r as Refused {
+    try expect(r.problems.map(\.at) == ["looks.a.comment", "looks.a.comment", "looks.b.comment"], "\(r.problems.map(\.at))")
+  }
+  // The command itself: status 2, the problems as JSON, nothing written.
+  let f = folder(), before = try attrs(f), run = Process(), out = Pipe()
+  run.executableURL = URL(fileURLWithPath: "build/punchr")
+  run.arguments = ["strike", "\(root)/client.json5", "plain", f, "--live", "--force", "--json"]
+  run.standardOutput = out
+  try run.run(); run.waitUntilExit()
+  let doc = try JSONSerialization.jsonObject(with: out.fileHandleForReading.readDataToEndOfFile()) as? [String: Any]
+  let problems = (doc?["problems"] as? [[String: String]] ?? []).map { "\($0["at"]!): \($0["problem"]!)" }
+  try expect(run.terminationStatus == 2, "status \(run.terminationStatus)")
+  try expect(problems.first == "owns.tags: a live punch owns only comments" && problems.count == 3, "\(problems)")
+  try expect(try attrs(f) == before, "a refused live strike wrote")
 }
 
 func clear(_ paths: [String], _ p: Punch) -> [FolderPlan] { carryOut(paths.map { planClear($0, p) }) }

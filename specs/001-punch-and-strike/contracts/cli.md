@@ -1,10 +1,17 @@
 # Contract: the `punchr` command
 
 ```
-punchr read <folder>... [--punch <punch>]...  what each folder wears, and which look of each known punch it matches
-punchr strike <punch> <look> <folder>... [--force] [--live]   plan, then dress the folders in the look
-punchr clear <punch> <folder>... [--force] [--live]     plan, then remove what the punch owns
+punchr read <item>... [--punch <punch>]...  what each item wears, and which look of each known punch it matches
+punchr strike <punch> <look> <item>... [--force] [--live]   plan, then dress the items in the look
+punchr clear <punch> <item>... [--force] [--live]     plan, then remove what the punch owns
 ```
+
+An item is a folder or, since 0.3.0, a regular file. A file wears tags and a comment only: a look
+with a stamp or an icon struck on a file fails for that file with `<path>: a file wears no stamp
+or icon`, status 1, and nothing is written to it; `read` gives a file `stamp: null` and
+`icon: false`. A symbolic link is refused (`a link: links are not followed`), as is anything
+else that is neither (`not a folder or a file`). The JSON keeps the key `folders` and `path` for
+every item, file or folder.
 
 Every verb also takes `--json`. `<punch>` is a name, looked up as `<name>.json5` in the punch
 folder, or a path (it contains `/` or ends in `.json5`). "Known punches", for `read`, are the
@@ -63,7 +70,7 @@ line with their path in the file, then the command stops.
       },
       "matches": { "client": "zente", "repository": null }
     },
-    { "path": "notes.txt", "error": "not a folder" }
+    { "path": "Projects/latest", "error": "Projects/latest: a link: links are not followed" }
   ]
 }
 ```
@@ -85,6 +92,9 @@ line with their path in the file, then the command stops.
   ]
 }
 ```
+
+A file refused for a stamp or icon look appears as
+`{ "path": "notes.txt", "error": "notes.txt: a file wears no stamp or icon" }`.
 
 `look` is absent for `clear`. `stamp` is `null` or `{ "sym": … }` / `{ "emoji": … }`. `comment`
 is the text or `null`; it was added in 0.2.0, beside keys that did not change. A refused

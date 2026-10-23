@@ -151,7 +151,7 @@ case "read":
       if let s = dress.stamp { print("    stamp \(s.text)") }
       if dress.icon { print("    icon") }
       if let c = dress.comment { print("    comment \(c)") }
-      if dress == Dress() { print("    nothing") }
+      if dress == Dress(isFile: dress.isFile) { print("    nothing") }
       for (p, l) in matches { print("    \(p): \(l ?? "no look")") }
     }
   }

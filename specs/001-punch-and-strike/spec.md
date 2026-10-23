@@ -183,7 +183,7 @@ punch, and compare the folder with its state before the strike.
   folders sharing it.
 - **`fail-per-folder`**: A folder that cannot be read or written MUST be reported and skipped;
   the other folders proceed; the exit status MUST be non-zero when any folder failed.
-- **`folders-only`**: punchr MUST act only on folders, and MUST NOT follow symbolic links or
+- **`folders-only`** (replaced by `folders-and-files` in [003](../003-files-wear-tags/spec.md)): punchr MUST act only on folders, and MUST NOT follow symbolic links or
   aliases.
 
 ### Key Entities

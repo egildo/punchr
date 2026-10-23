@@ -29,6 +29,9 @@ func planStrike(_ path: String, _ punch: Punch, _ look: Look, fork: Data?) -> Fo
   var p = FolderPlan(path: path)
   let dress: Dress
   do { dress = try readDress(path) } catch { p.error = "\(error)"; return p }
+  if dress.isFile && (look.stamp != nil || look.icon != nil) {
+    p.error = "\(FolderError(path, "a file wears no stamp or icon"))"; return p
+  }
 
   var entries: [String] = [], kept = Set<String>()
   for entry in dress.entries {
@@ -41,7 +44,7 @@ func planStrike(_ path: String, _ punch: Punch, _ look: Look, fork: Data?) -> Fo
   for tag in look.tags where !kept.contains(tag.name) { p.add.tags.append(tag); entries.append(tag.entry) }
   if !p.add.tags.isEmpty || !p.remove.tags.isEmpty { p.entries = entries }
 
-  if punch.ownsStamp {
+  if punch.ownsStamp && !dress.isFile {
     if dress.stamp == look.stamp { p.keep.stamp = look.stamp } else {
       p.remove.stamp = dress.stamp
       p.add.stamp = look.stamp
@@ -49,7 +52,7 @@ func planStrike(_ path: String, _ punch: Punch, _ look: Look, fork: Data?) -> Fo
     }
   }
 
-  if punch.ownsIcon {
+  if punch.ownsIcon && !dress.isFile {
     let current = dress.icon ? (try? readIcon(path)) ?? nil : nil
     let hasFile = FileManager.default.fileExists(atPath: iconFile(path))
     if let fork {
@@ -103,7 +106,7 @@ func planClear(_ path: String, _ punch: Punch) -> FolderPlan {
   p.remove.tags = dress.tags.filter { punch.ownedTags.contains($0.name) }
   if !p.remove.tags.isEmpty { p.entries = entries }
   if punch.ownsStamp, let s = dress.stamp { p.remove.stamp = s; p.stamp = .remove }
-  if punch.ownsIcon && (dress.icon || FileManager.default.fileExists(atPath: iconFile(path))) {
+  if punch.ownsIcon && !dress.isFile && (dress.icon || FileManager.default.fileExists(atPath: iconFile(path))) {
     p.remove.icon = true; p.icon = .remove
   }
   if punch.ownsComment, let c = dress.comment { p.remove.comment = c; p.comment = .remove }

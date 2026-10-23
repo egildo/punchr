@@ -8,7 +8,7 @@ Named for type founding: a letter's punch is cut once in steel and struck into e
 
 ## Status
 
-Written looks work: `read`, `strike` and `clear`, checked on scratch folders and by eye in Finder; comments joined them in 0.2.0. Badges do not yet: the extension still draws one test badge on any folder named `lean-a` under your home, and the feed file that will drive it is not written. The first feature's spec, plan and tasks are in [specs/001-punch-and-strike](specs/001-punch-and-strike/spec.md); comments and `--live` are in [specs/002-live-comments](specs/002-live-comments/spec.md); what was measured is in the dated notes under [notes/](notes/).
+Written looks work: `read`, `strike` and `clear`, checked on scratch folders and by eye in Finder; comments joined them in 0.2.0, files in 0.3.0. Badges do not yet: the extension still draws one test badge on any folder named `lean-a` under your home, and the feed file that will drive it is not written. The first feature's spec, plan and tasks are in [specs/001-punch-and-strike](specs/001-punch-and-strike/spec.md); comments and `--live` are in [specs/002-live-comments](specs/002-live-comments/spec.md), files in [specs/003-files-wear-tags](specs/003-files-wear-tags/spec.md); what was measured is in the dated notes under [notes/](notes/).
 
 ## The punch
 
@@ -40,10 +40,12 @@ A punch may also own the Finder comment, the text in Get Info and in a list view
 A punch that owns the comment owns it whole: a comment written by hand is replaced, and the plan marks it `(not this punch's)`. punchr sets the comment through Finder itself, so Finder shows it at once; Finder also keeps a copy in the parent folder's `.DS_Store`. The first time, macOS asks for permission to control Finder. If that is refused, each folder fails with a message pointing to System Settings → Privacy & Security → Automation, where it can be allowed later.
 
 ```
-punchr read <folder>... [--punch <punch>]...                  what each folder wears, and which look it matches
-punchr strike <punch> <look> <folder>... [--force] [--live]   dress the folders in a look
-punchr clear <punch> <folder>... [--force] [--live]           remove what the punch owns
+punchr read <item>... [--punch <punch>]...                  what each folder or file wears, and which look it matches
+punchr strike <punch> <look> <item>... [--force] [--live]   dress the folders and files in a look
+punchr clear <punch> <item>... [--force] [--live]           remove what the punch owns
 ```
+
+Files wear looks too: a regular file can wear tags (Finder shows the colour's dot) and a comment. A stamp and an icon are for folders only, so a look holding either, struck on a file, fails for that file with `a file wears no stamp or icon` and writes nothing to it. A Finder alias is a file and wears the tags itself; symbolic links are never followed.
 
 `--live` is a promise from the caller that the look follows a state: punchr then refuses, with status 2, a punch that owns tags, a stamp or an icon, so a moving state can only reach a comment.
 

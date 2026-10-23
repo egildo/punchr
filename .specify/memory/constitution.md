@@ -18,16 +18,23 @@ in a punch; a special case for one caller.
 **Why:** tabularium is the first caller, not the only one. A tool that knows nothing about its
 callers can serve any of them.
 
-### Moving state stays off disk
+### Moving state stays live
 
-A look that follows a state (ahead, behind, dirty, syncing) is a badge, drawn live by the
-Finder Sync extension. Only a look that does not move is written onto the folder.
+A look that follows a state (ahead, behind, dirty, syncing) goes only to a **live part**: a
+badge, drawn by the Finder Sync extension with nothing written, or the folder's Finder comment,
+which the records that carry a folder's attributes leave out. Tags, stamps and icons carry only
+looks that do not move. `--live` is the guard: under it a punch that owns anything but live parts
+is refused.
 
-**Forbids:** writing a changing state as an attribute, tag, stamp or icon; a badge that needs a
-file inside the folder it badges.
+**Forbids:** writing a changing state as a tag, a stamp, an icon or any attribute other than the
+Finder comment; a badge that needs a file inside the folder it badges; a punch owning more than
+live parts accepted under `--live`.
 
 **Why:** a written state churns every record that carries the folder's attributes,
 tabularium's first of all, and lies as soon as it is copied away from the state it described.
+Tabularium's record skips the Finder comment, so a comment can change without churning it
+(Egildo, 2026-10-23). A comment copied away still keeps its last state; that is the price of
+showing the state before badges exist.
 
 ### Touch only what the punch owns
 
@@ -45,8 +52,10 @@ write the same attributes. A plan first, as in the sibling tools, makes every wr
 
 ### Finder's own doors
 
-punchr dresses folders only through what macOS offers for it: the Finder Sync extension and the
-attributes and files Finder reads, in the formats measured and written down in a dated note.
+punchr dresses folders only through what macOS offers for it: the Finder Sync extension, the
+attributes and files Finder reads, in the formats measured and written down in a dated note, and
+Finder's own scripting where only Finder can write a part whole (the comment, which it keeps in
+an attribute and in the parent folder's `.DS_Store`).
 
 **Forbids:** code injected into Finder; private frameworks; a format no dated note records as
 measured on a real Mac; a second Finder Sync extension for the same folders.
@@ -106,4 +115,4 @@ removing or redefining a principle, MINOR for adding a principle or section or m
 widening one, PATCH for wording. Exceptions to a principle are recorded in the plan's
 Complexity Tracking with the simpler alternative and why it fails.
 
-**Version**: 1.0.1 | **Ratified**: 2026-10-22 | **Last Amended**: 2026-10-22
+**Version**: 2.0.0 | **Ratified**: 2026-10-22 | **Last Amended**: 2026-10-23

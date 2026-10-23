@@ -41,11 +41,16 @@ func listAttrs(_ path: String) throws -> [String] {
   return buf.split(separator: 0).map { String(decoding: $0.map { UInt8(bitPattern: $0) }, as: UTF8.self) }
 }
 
-// Only folders, and links are never followed (folders-only).
-func requireFolder(_ path: String) throws {
+// Folders and regular files; links are never followed (folders-and-files). True for a folder.
+func isFolder(_ path: String) throws -> Bool {
   var st = stat()
   if lstat(path, &st) < 0 { throw FolderError(path) }
-  if st.st_mode & S_IFMT != S_IFDIR { throw FolderError(path, "not a folder") }
+  switch st.st_mode & S_IFMT {
+  case S_IFDIR: return true
+  case S_IFREG: return false
+  case S_IFLNK: throw FolderError(path, "a link: links are not followed")
+  default: throw FolderError(path, "not a folder or a file")
+  }
 }
 
 struct Dress: Equatable {
@@ -53,15 +58,21 @@ struct Dress: Equatable {
   var stamp: Stamp?
   var icon = false
   var comment: String?
+  var isFile = false // a file wears no stamp or icon (a-file-wears-no-stamp-or-icon)
   var tags: [Tag] { entries.map(Tag.init(entry:)) }
 }
 
 func readDress(_ path: String) throws -> Dress {
-  try requireFolder(path)
   var d = Dress()
+  d.isFile = try !isFolder(path)
   if let data = try getAttr(path, Attr.tags) {
     d.entries = (try? PropertyListSerialization.propertyList(from: data, format: nil)) as? [String] ?? []
   }
+  if let data = try getAttr(path, Attr.comment) {
+    let text = (try? PropertyListSerialization.propertyList(from: data, format: nil)) as? String
+    d.comment = text?.isEmpty == false ? text : nil
+  }
+  if d.isFile { return d }
   if let data = try getAttr(path, Attr.stamp) {
     let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: String]
     d.stamp = obj?["sym"].map(Stamp.sym) ?? obj?["emoji"].map(Stamp.emoji)
@@ -71,10 +82,6 @@ func readDress(_ path: String) throws -> Dress {
   let bit = try getAttr(path, Attr.finderInfo).map { $0.count > 8 && $0[$0.startIndex + 8] & 0x04 != 0 } ?? false
   if !bit { d.stamp = nil }
   d.icon = bit && FileManager.default.fileExists(atPath: iconFile(path))
-  if let data = try getAttr(path, Attr.comment) {
-    let text = (try? PropertyListSerialization.propertyList(from: data, format: nil)) as? String
-    d.comment = text?.isEmpty == false ? text : nil
-  }
   return d
 }
 

@@ -140,7 +140,7 @@ check("share-one-icon-per-volume, icon-costs-kilobytes") {
   print("    icon: \(size) bytes, shared by 12 folders")
 }
 
-check("fail-per-folder, folders-only") {
+check("fail-per-folder, folders-and-files") {
   let p = try punch("client", client)
   let good = (1...3).map { folder("good\($0)") }
   let file = "\(root)/a-file"; fm.createFile(atPath: file, contents: nil)
@@ -151,8 +151,8 @@ check("fail-per-folder, folders-only") {
   defer { chmod(locked, 0o755) }
   let plans = try strike([good[0], file, good[1], link, locked, good[2]], p, "plain")
   let failed = plans.filter { $0.error != nil }.map(\.path)
-  try expect(failed == [file, link, locked], "failed \(failed)")
-  for g in good { try expect(try readDress(g).entries == ["client\n4"], "\(g) not struck") }
+  try expect(failed == [link, locked], "failed \(failed)")
+  for g in good + [file] { try expect(try readDress(g).entries == ["client\n4"], "\(g) not struck") }
   try expect(try attrs(target) == untouched, "the link was followed")
 }
 
@@ -202,6 +202,35 @@ check("live-owns-only-comments") {
   try expect(run.terminationStatus == 2, "status \(run.terminationStatus)")
   try expect(problems.first == "owns.tags: a live punch owns only comments" && problems.count == 3, "\(problems)")
   try expect(try attrs(f) == before, "a refused live strike wrote")
+}
+
+check("a-file-wears-no-stamp-or-icon, file-strike-then-clear-restores") {
+  let p = try punch("client", client)
+  let file = "\(root)/notes.txt"; fm.createFile(atPath: file, contents: Data("x".utf8))
+  try writeTags(file, ["red-team\n6"])
+  let before = try attrs(file)
+  let refused = try strike([file], p, "zente")[0]
+  try expect(refused.error == "\(file): a file wears no stamp or icon", "\(refused.error ?? "no error")")
+  try expect(try attrs(file) == before, "a refused file was written")
+  let run = Process(), out = Pipe()
+  run.executableURL = URL(fileURLWithPath: "build/punchr")
+  run.arguments = ["strike", "\(root)/client.json5", "zente", file, "--force", "--json"]
+  run.standardOutput = out
+  try run.run(); run.waitUntilExit()
+  let doc = try JSONSerialization.jsonObject(with: out.fileHandleForReading.readDataToEndOfFile()) as? [String: Any]
+  let entry = (doc?["folders"] as? [[String: Any]])?.first
+  try expect(run.terminationStatus == 1 && entry?["error"] as? String == "\(file): a file wears no stamp or icon",
+             "status \(run.terminationStatus), \(entry ?? [:])")
+  try expect(try attrs(file) == before, "the command wrote to a refused file")
+  let filed = try punch("filed", "{ owns: { tags: ['untracked'], stamp: true, icon: true, comment: true }, looks: { untracked: { tags: [{ untracked: 'grey' }], comment: 'untracked' } } }")
+  try expect(try strike([file], filed, "untracked")[0].error == nil, "strike on a file failed")
+  let d = try readDress(file)
+  try expect(d.entries == ["red-team\n6", "untracked\n1"] && d.comment == "untracked" && d.stamp == nil && !d.icon, "dress \(d)")
+  try expect(try finderComment(file) == "untracked", "Finder shows another comment")
+  try expect(try matchOf(file, filed) == "untracked", "the file matches no look")
+  try expect(clear([file], filed)[0].error == nil, "clear on a file failed")
+  let after = try attrs(file)
+  try expect(after == before, "attributes differ: \(after.keys.sorted())")
 }
 
 func clear(_ paths: [String], _ p: Punch) -> [FolderPlan] { carryOut(paths.map { planClear($0, p) }) }

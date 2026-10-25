@@ -289,5 +289,57 @@ check("clear-one-keeps-the-others") {
   try expect(try !readDress(folders[0]).icon, "the cleared folder kept its icon")
 }
 
+check("punch-declares-shelves") {
+  let ok = try punch("shelved", "{ shelves: { clients: { name: 'Clients', symbol: 'person.2' } } }")
+  try expect(ok.looks.isEmpty && ok.shelves["clients"] == ShelfDecl(key: "clients", name: "Clients", symbol: "person.2"),
+             "shelves \(ok.shelves)")
+  do {
+    _ = try punch("bad-shelves", "{ shelves: { Bad_Key: { name: 'a/b', symbol: 'person 2', colour: 'red' }, ok: { symbol: 'star' } } }")
+    throw CheckFailed(description: "accepted")
+  } catch let r as Refused {
+    let at = r.problems.map(\.at).sorted()
+    try expect(at == ["shelves.Bad_Key", "shelves.Bad_Key.colour", "shelves.Bad_Key.name", "shelves.Bad_Key.symbol", "shelves.ok.name"],
+               "problems at \(at)")
+  }
+}
+
+check("link names, identifiers and changes") {
+  let names = shelfLinks(["/a/docs", "/b/docs", "/c/x", "/d/docs"]).map(\.name)
+  try expect(names == ["docs", "docs 2", "x", "docs 3"], "names \(names)")
+  try expect(shelfLinks(["/b/docs", "/c/x"]).map(\.target) == ["/b/docs", "/c/x"], "identifiers moved")
+  let before = ["/a/docs", "/b/docs", "/c/x"], after = ["/b/docs", "/c/x", "/e/y"]
+  try expect(targets(fromAnchor: anchorData(before)) == before, "the anchor does not carry the list")
+  let changes = linkChanges(from: before, to: after)
+  try expect(changes.removed == ["/a/docs"] && changes.current.map(\.target) == after, "changes \(changes)")
+  try expect(changes.current.first?.name == "docs", "a suffix did not move back")
+}
+
+check("a-shelf-owns-no-attributes") {
+  let p = try punch("shelved", "{ shelves: { clients: { name: 'Clients', symbol: 'person.2' } } }")
+  let items = (1...3).map { folder("item\($0)") }
+  let before = try items.map(attrs), inside = try items.map { try fm.contentsOfDirectory(atPath: $0) }
+  let shelves = URL(fileURLWithPath: "\(root)/Shelves")
+  let plan = planShelve(p, p.shelves["clients"]!, items + [items[0]], in: shelves)
+  try expect(plan.setUp && plan.after == items && plan.error == nil, "plan \(plan.after) \(String(describing: plan.error))")
+  try expect(try items.map(attrs) == before && items.map { try fm.contentsOfDirectory(atPath: $0) } == inside,
+             "planning touched an item")
+  // The generated app, without signing or registering it.
+  let template = URL(fileURLWithPath: "build/Punchr.app/Contents/Resources/Shelf.app")
+  try makeShelfApp("client", p.shelves["clients"]!, template: template, at: plan.app)
+  let info = NSDictionary(contentsOf: plan.app.appendingPathComponent("Contents/Info.plist"))!
+  let ext = NSDictionary(contentsOf: plan.app.appendingPathComponent("Contents/PlugIns/ShelfProvider.appex/Contents/Info.plist"))!
+  try expect(info["CFBundleIdentifier"] as? String == "local.punchr.shelf.client.clients" && info["CFBundleName"] as? String == "Clients",
+             "app \(info)")
+  try expect(ext["CFBundleIdentifier"] as? String == "local.punchr.shelf.client.clients.provider", "extension id")
+  try expect(ext.value(forKeyPath: "CFBundleIcons.CFBundlePrimaryIcon.CFBundleSymbolName") as? String == "person.2", "symbol")
+  try expect(ext.value(forKeyPath: "NSExtension.NSExtensionFileProviderDocumentGroup") as? String == "group.local.punchr.shelf.client.clients",
+             "group")
+  let ents = try PropertyListSerialization.propertyList(from: shelfEntitlements("group.x", sandboxed: true), format: nil) as! [String: Any]
+  try expect(ents["com.apple.security.app-sandbox"] as? Bool == true && ents["com.apple.security.application-groups"] as? [String] == ["group.x"],
+             "entitlements \(ents)")
+  try expect(shelfIDs("my punch", "k").app == "local.punchr.shelf.my-punch.k" && shelfIDs("my punch", "k").domain == "my punch.k",
+             "identifiers")
+}
+
 try? fm.removeItem(atPath: root)
 exit(failures == 0 ? 0 : 1)

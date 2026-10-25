@@ -31,6 +31,22 @@ plan. Plain `punchr shelves` only reads.
 After writing, `✓ Clients` or `✗ Clients: <reason>`. A shelf set up but not enabled adds the line
 `  Finder: click Enable in the "Clients" row once.`
 
+## `shelve --json`
+
+```json
+{
+  "punch": "client", "shelf": "clients", "name": "Clients", "symbol": "person.2",
+  "setUp": true, "written": false, "enabled": null,
+  "links": [
+    { "name": "Zente", "target": "/Volumes/Projects/Zente", "new": true, "exists": true },
+    { "name": "Zente 2", "target": "/Volumes/Old/Zente", "new": true, "exists": false }
+  ]
+}
+```
+
+`links` is the whole shelf after the change, in shelving order; `new` marks what this call adds.
+`enabled` is `null` until the shelf is set up. A failure adds `"error"`.
+
 ## `punchr shelves`
 
 ```

@@ -77,7 +77,7 @@ Sources/
 ├── shelf/
 │   ├── Links.swift        # naming links (suffixes), the anchor that carries the list; compiled into the extension, the app and the checks
 │   ├── Provider.swift     # the File Provider extension: items, enumeration, changes, quiet writes
-│   └── host.swift         # the template app's executable: add, remove, list its one domain, report userEnabled
+│   └── main.swift         # the template app's executable: add, remove, list its one domain, report userEnabled
 ├── core/
 │   └── Shelves.swift      # shelves in a punch, generating a shelf's app, the plan for shelve/unshelve/refresh/tidy
 ├── app/main.swift         # the shelve, unshelve and shelves verbs

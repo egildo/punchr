@@ -5,6 +5,7 @@ let usage = """
   usage: punchr strike <punch> <look> <folder>... [--force] [--live] [--json]
          punchr read <folder>... [--punch <punch>]... [--json]
          punchr clear <punch> <folder>... [--force] [--live] [--json]
+         punchr shelve <punch> <shelf> <item>... [--force] [--json]
   """
 
 var args = Array(CommandLine.arguments.dropFirst())
@@ -92,7 +93,51 @@ func run(_ verb: String, _ punch: Punch, _ header: [String: Any], _ plans: [Fold
   exit(plans.contains { $0.error != nil } ? 1 : 0)
 }
 
+// Shelve (specs/004-shelves/contracts/cli.md): plans, then asks or stops as strike does.
+func runShelve(_ plan: ShelfPlan) -> Never {
+  var p = plan
+  let links = shelfLinks(p.after)
+  if !json {
+    if let e = p.error { print("✗ \(e)") }
+    else if !p.changes { print("✓ \(p.shelf.name): nothing to change") }
+    else {
+      print("· \(p.shelf.name) (\(p.shelf.symbol))\(p.setUp ? "        + set up: Finder will ask once to enable it, in its row" : "")")
+      for l in links {
+        let renamed = l.name == (l.target as NSString).lastPathComponent ? "" : " as \"\(l.name)\""
+        let missing = FileManager.default.fileExists(atPath: l.target) ? "" : "   missing"
+        print(p.before.contains(l.target) ? "    = \(l.target)         already on the shelf" : "    + \(l.target)\(renamed)\(missing)")
+      }
+    }
+  }
+  var write = force
+  if !force && !json && p.error == nil && p.changes && isatty(0) == 1 && isatty(1) == 1 {
+    print("Shelve? [y/N] ", terminator: ""); write = readLine()?.lowercased() == "y"
+  }
+  let wrote = write && p.error == nil && p.changes
+  if wrote {
+    p = carryOut(p)
+    if !json {
+      print(p.error.map { "✗ \($0)" } ?? "✓ \(p.shelf.name)")
+      if p.error == nil && p.enabled != true { print("  Finder: click Enable in the \"\(p.shelf.name)\" row once.") }
+    }
+  }
+  if json {
+    var doc: [String: Any] = ["punch": p.punch, "shelf": p.shelf.key, "name": p.shelf.name, "symbol": p.shelf.symbol,
+                              "setUp": p.setUp, "written": wrote, "enabled": p.enabled as Any? ?? NSNull(),
+                              "links": links.map { ["name": $0.name, "target": $0.target, "new": !p.before.contains($0.target),
+                                                    "exists": FileManager.default.fileExists(atPath: $0.target)] }]
+    if let e = p.error { doc["error"] = e }
+    emit(doc)
+  }
+  exit(p.error == nil ? 0 : 1)
+}
+
 switch args.first {
+case "shelve":
+  guard args.count >= 4 else { fail("shelve needs a punch, a shelf and at least one item\n\(usage)") }
+  let punch = load(args[1])
+  guard let shelf = punch.shelves[args[2]] else { fail("punch \(punch.name) declares no shelf \(args[2])") }
+  runShelve(planShelve(punch, shelf, Array(args.dropFirst(3))))
 case "strike":
   guard args.count >= 4 else { fail("strike needs a punch, a look and at least one folder\n\(usage)") }
   let punch = loadToWrite(args[1])

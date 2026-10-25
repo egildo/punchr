@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>local.punchr.shelf.provider</string>
+<key>CFBundleExecutable</key><string>ShelfProvider</string>
+<key>CFBundleName</key><string>punchr test</string>
+<key>CFBundleDisplayName</key><string>punchr test</string>
+<key>CFBundlePackageType</key><string>XPC!</string>
+<key>CFBundleVersion</key><string>1</string>
+<key>CFBundleShortVersionString</key><string>0.0.1</string>
+<key>LSMinimumSystemVersion</key><string>26.0</string>
+<key>CFBundleIcons</key><dict><key>CFBundlePrimaryIcon</key><dict><key>CFBundleSymbolName</key><string>books.vertical</string></dict></dict>
+<key>NSExtension</key><dict>
+  <key>NSExtensionPointIdentifier</key><string>com.apple.fileprovider-nonui</string>
+  <key>NSExtensionPrincipalClass</key><string>ShelfProvider.Shelf</string>
+  <key>NSExtensionFileProviderDocumentGroup</key><string>group.local.punchr.shelf</string>
+  <key>NSExtensionFileProviderSupportsEnumeration</key><true/>
+</dict>
+</dict></plist>

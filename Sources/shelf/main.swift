@@ -14,6 +14,16 @@ func wait() -> Never {
   while !done { RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.1)) }
   exit(failed ? 1 : 0)
 }
+// The bytes of an alias file as Finder writes one: the bookmark wrapped in the file's own header, which only
+// writeBookmarkData adds, so it is written to a temporary file and read back.
+func aliasFileBytes(_ target: String) -> Data? {
+  let file = FileManager.default.temporaryDirectory.appendingPathComponent("punchr-alias-\(getpid())")
+  defer { try? FileManager.default.removeItem(at: file) }
+  guard let bookmark = try? URL(fileURLWithPath: target).bookmarkData(options: .suitableForBookmarkFile,
+                                                                      includingResourceValuesForKeys: nil, relativeTo: nil),
+        (try? URL.writeBookmarkData(bookmark, to: file)) != nil else { return nil }
+  return try? Data(contentsOf: file)
+}
 func domain(_ id: String, _ name: String = "") -> NSFileProviderDomain {
   NSFileProviderDomain(identifier: NSFileProviderDomainIdentifier(id), displayName: name)
 }
@@ -22,7 +32,10 @@ switch (args.first, args.count) {
 case ("add", 4):
   let d = domain(args[1], args[2])
   guard let joined = try? String(contentsOfFile: args[3], encoding: .utf8) else { finish(CocoaError(.fileReadNoSuchFile)); wait() }
-  d.userInfo = [linksKey: joined] // userInfo takes plain strings only
+  // userInfo takes plain strings and data only. A target that cannot be found gets no alias and opens nothing.
+  var info: [String: Any] = [linksKey: joined]
+  for t in parseLinks(joined) { info[aliasKey(t)] = aliasFileBytes(t) }
+  d.userInfo = info
   NSFileProviderManager.add(d) { error in
     guard error == nil, let manager = NSFileProviderManager(for: d) else { finish(error); return }
     manager.signalEnumerator(for: .workingSet) { _ in manager.signalEnumerator(for: .rootContainer) { finish($0) } }

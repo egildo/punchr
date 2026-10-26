@@ -10,7 +10,8 @@ A punch declares shelves (a key, a row name, an SF Symbol). `punchr shelve` sets
 first time by copying a template app out of Punchr.app into
 `~/Library/Application Support/punchr/Shelves/`, giving it the shelf's identifiers, name and
 symbol, signing it ad hoc and registering it; its File Provider extension serves one domain whose
-items are symbolic links to the shelved folders and files. The list of links lives in the
+items are Finder aliases of the shelved folders and files (symbolic links were tried first and
+made the system's daemon loop; research, "What a link is"). The list of links lives in the
 domain's `userInfo`; `shelve` and `unshelve` change it and signal Finder. The second scratch test
 settled that one symbol per row needs one extension per shelf, and that a copied, re-signed
 template works. See [research](research.md).

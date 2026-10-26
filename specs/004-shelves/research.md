@@ -88,3 +88,21 @@ decisions. Everything registered for the tests was removed afterwards.
   into the template, with no new dependency.
 - Generating a shelf uses `/usr/bin/plutil`, `/usr/bin/codesign`, `lsregister` and
   `/usr/bin/pluginkit`, all on every Mac.
+
+## What a link is (settled by eye, 2026-10-26)
+
+- **Tried first: symbolic links.** They opened the real folders, but the system's File Provider
+  daemon then tried to read every target, its sandbox refused (about eight times a second per
+  link, wherever the target lived: `/private/tmp` and the `dev` volume alike), and Spotlight
+  re-indexed the shelf each time: the icons blinked. Reporting every link as changed on every
+  enumeration made it worse (the system rewrote the links, which counted as a change); now only new,
+  gone or renamed links are reported.
+- **Decision: Finder aliases.** A link is a small alias file, which the daemon has no reason to go
+  through. The shelf's app (not sandboxed) makes each alias and passes its bytes in the domain's
+  `userInfo`; the extension serves them as the item's contents, with the alias type and creator.
+  The root asks for everything to stay downloaded, so no cloud shows.
+- **Two traps found on the way.** The raw bookmark data is not an alias file: Finder's writer adds
+  its own header, so the app writes each alias to a temporary file and reads it back. And the
+  system keeps an item's contents until told its version changed: the item's content version is a
+  fingerprint of its alias bytes, and the sync anchor carries a fingerprint of all of them.
+- **Consequence accepted by Egildo**: an alias follows its folder when it is moved or renamed.

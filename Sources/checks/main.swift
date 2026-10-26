@@ -177,7 +177,10 @@ check("own-the-comment-whole, write-the-comment-through-finder") {
   _ = try strike([f], p, "zente")
   let shown = try finderComment(f)
   try expect(shown == "Zente \"client\" \\ caffè\ntwo", "Finder shows \(shown)")
-  try expect(fm.fileExists(atPath: "\(root)/.DS_Store"), "no .DS_Store: not written through Finder")
+  // Finder writes its .DS_Store when it gets round to it, not at once.
+  let deadline = Date().addingTimeInterval(5)
+  while !fm.fileExists(atPath: "\(root)/.DS_Store") && Date() < deadline { usleep(100_000) }
+  try expect(fm.fileExists(atPath: "\(root)/.DS_Store"), "no .DS_Store within 5 s: not written through Finder")
 }
 
 check("live-owns-only-comments") {
@@ -309,9 +312,13 @@ check("link names, identifiers and changes") {
   try expect(shelfLinks(["/b/docs", "/c/x"]).map(\.target) == ["/b/docs", "/c/x"], "identifiers moved")
   let before = ["/a/docs", "/b/docs", "/c/x"], after = ["/b/docs", "/c/x", "/e/y"]
   try expect(targets(fromAnchor: anchorData(before)) == before, "the anchor does not carry the list")
+  try expect(targets(fromAnchor: anchorData(before, stamp: "ab12")) == before && stamp(fromAnchor: anchorData(before, stamp: "ab12")) == "ab12",
+             "the anchor does not carry the stamp")
   let changes = linkChanges(from: before, to: after)
-  try expect(changes.removed == ["/a/docs"] && changes.current.map(\.target) == after, "changes \(changes)")
-  try expect(changes.current.first?.name == "docs", "a suffix did not move back")
+  try expect(changes.removed == ["/a/docs"] && changes.changed.map(\.target) == ["/b/docs", "/e/y"], "changes \(changes)")
+  try expect(changes.changed.first?.name == "docs", "a suffix did not move back")
+  let none = linkChanges(from: after, to: after)
+  try expect(none.changed.isEmpty && none.removed.isEmpty, "no change reports \(none)")
 }
 
 check("a-shelf-owns-no-attributes") {

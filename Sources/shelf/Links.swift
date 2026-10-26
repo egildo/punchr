@@ -3,6 +3,8 @@
 import Foundation
 
 let linksKey = "links"
+// Each link's alias (bookmark data), made by the shelf's app, which may read the targets; the extension may not.
+func aliasKey(_ target: String) -> String { "alias:\(target)" }
 
 struct Link: Equatable {
   let target: String // the real item's absolute path; also the link's identifier on the shelf
@@ -22,11 +24,17 @@ func shelfLinks(_ targets: [String]) -> [Link] {
   }
 }
 
-// The sync anchor is the list itself, so the changes since any anchor can be worked out without a store.
-func anchorData(_ targets: [String]) -> Data { Data(joinLinks(targets).utf8) }
-func targets(fromAnchor data: Data) -> [String] { parseLinks(String(decoding: data, as: UTF8.self)) }
+// The sync anchor is the list itself, so the changes since any anchor can be worked out without a store, plus a
+// stamp of the aliases' bytes after "#": new aliases for the same list must reach Finder too.
+func anchorData(_ targets: [String], stamp: String = "") -> Data { Data((joinLinks(targets) + "\n#" + stamp).utf8) }
+func targets(fromAnchor data: Data) -> [String] { parseLinks(String(decoding: data, as: UTF8.self)).filter { !$0.hasPrefix("#") } }
+func stamp(fromAnchor data: Data) -> String {
+  parseLinks(String(decoding: data, as: UTF8.self)).last { $0.hasPrefix("#") }.map { String($0.dropFirst()) } ?? ""
+}
 
-// Since `old`: every current link is reported (a suffix may have moved), and the targets no longer there are gone.
-func linkChanges(from old: [String], to new: [String]) -> (current: [Link], removed: [String]) {
-  (shelfLinks(new), old.filter { !new.contains($0) })
+// Since `old`: the links that are new or renamed (a suffix may have moved), and the targets no longer there.
+// Reporting an unchanged link makes the system rewrite it, which reports a change again: a loop.
+func linkChanges(from old: [String], to new: [String]) -> (changed: [Link], removed: [String]) {
+  let before = shelfLinks(old)
+  return (shelfLinks(new).filter { !before.contains($0) }, old.filter { !new.contains($0) })
 }

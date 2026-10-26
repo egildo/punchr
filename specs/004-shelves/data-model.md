@@ -41,6 +41,13 @@ The item's path as given, made absolute. Its name in the shelf is the item's las
 component; when two links share a name, the second and later get ` 2`, ` 3`, … in shelving order.
 A link whose target is missing stays; `punchr shelves` reports `missing`.
 
+On the shelf, a link is a Finder alias file: its contents are the alias bytes exactly as Finder's
+own alias writer puts them in a file (header included), made by the shelf's app, which may read
+the targets, and passed in the domain's `userInfo` beside the list (`alias:<path>` → bytes); its
+type and creator are `fdrp` and `MACS`. A target that cannot be found when the list is set gets an
+empty alias. The sync anchor is the list followed by `#` and a fingerprint of all the aliases, so
+new alias bytes for the same list still reach Finder.
+
 ## States of a shelf
 
 ```

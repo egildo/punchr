@@ -82,10 +82,11 @@ its folder under `~/Library/CloudStorage` are gone and the scratch folders are u
 
 ### Edge Cases
 
-- A linked folder or file is moved, renamed or deleted: the link stays, points nowhere, and
-  `read` reports it as missing; punchr does not chase it.
+- A linked folder or file is moved or renamed: each link is a Finder alias, so Finder follows it
+  where an alias can (Egildo, 2026-10-26: "aliases may follow moved folders, that's fine"). An
+  item that is deleted leaves a link that opens nothing, and `punchr shelves` reports it missing.
 - A linked item sits on a volume that is not mounted: the link opens nothing until the volume
-  returns, like any symbolic link.
+  returns, as any alias does.
 - Someone drags a file onto a shelf or renames a link in Finder: the shelf refuses the change
   quietly and keeps its links; nothing is written to the linked items.
 - Two links on one shelf would have the same name (two folders called `docs`): each still gets
@@ -116,8 +117,8 @@ its folder under `~/Library/CloudStorage` are gone and the scratch folders are u
 
 - **`one-row-per-shelf`**: Each set-up shelf MUST appear as its own sidebar row with its own
   name and symbol.
-- **`links-not-copies`**: A shelf MUST hold only links to the real items; it MUST NOT copy,
-  move or sync their contents.
+- **`links-not-copies`**: A shelf MUST hold only links to the real items, each a Finder alias; it
+  MUST NOT copy, move or sync their contents.
 - **`no-error-marks`**: Finder MUST show the links without sync error marks; changes Finder
   tries to make inside a shelf are refused quietly or ignored.
 - **`say-when-enabling-is-needed`**: When a shelf is set up and not yet enabled, punchr MUST say
@@ -138,8 +139,8 @@ its folder under `~/Library/CloudStorage` are gone and the scratch folders are u
 
 - **Shelf**: declared in a punch (a name for the sidebar row, one SF Symbol); its list of items
   is kept with the shelf and changed by `shelve` and `unshelve`.
-- **Link**: an item on a shelf; its name in the shelf and the path of the real folder or file it
-  points to. A link to something missing is still a link.
+- **Link**: an item on a shelf, shown by Finder as an alias; its name in the shelf and the path
+  of the real folder or file it points to. A link to something missing is still a link.
 
 ## Success Criteria *(mandatory)*
 

@@ -165,12 +165,9 @@ its folder under `~/Library/CloudStorage` are gone and the scratch folders are u
   bypass it.
 - The row's place in the sidebar (beside iCloud Drive and OneDrive) is Finder's choice and
   cannot be moved by punchr.
-- Whether several shelves show their own names (the spike's single shelf showed the app's name
-  instead) is measured in the plan's research.
-- The symbol is declared on the extension, not on the shelf (in the spike, one key in the
-  extension's settings; the domain has no icon of its own that we know of). So one symbol per
-  shelf likely means one small extension per shelf, generated from a template when a shelf is set
-  up and signed ad hoc; if each also sits in its own small app, the app's name would give the
-  row its name too. The plan settles this first; it is the largest unknown in this spec.
+- Settled by the plan's research: the symbol belongs to an extension, never to a shelf, so each
+  shelf gets its own small app, generated from a template and signed ad hoc; a lone shelf in its
+  own app is shown under the app's name, so the row reads exactly as the shelf is named, spaces
+  kept ("Old Work").
 - Shelves are independent of looks and badges: a shelf writes nothing on what it links to, so
   the constitution's live/written distinction does not apply to it.

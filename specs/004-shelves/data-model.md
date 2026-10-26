@@ -29,7 +29,7 @@ its path (`shelves.clients.symbol`).
 
 | Part | Where |
 |---|---|
-| its app | `~/Library/Application Support/punchr/Shelves/<name>.app` |
+| its app | `~/Library/Application Support/punchr/Shelves/<name>.app`; its `Info.plist` also records `PunchrPunch`, `PunchrPunchFile`, `PunchrShelf` and `PunchrSymbol`, so `punchr shelves` finds its punch again |
 | identifiers | app `local.punchr.shelf.<punch>.<key>`, extension `….provider`, app group `group.local.punchr.shelf.<punch>.<key>` |
 | its domain | identifier `<punch>.<key>`, display name = `name` |
 | its links | the domain's `userInfo["links"]`: absolute paths, newline-joined, in the order shelved |

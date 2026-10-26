@@ -108,9 +108,9 @@ after an upgrade.
 
 ## Phase 6: Polish
 
-- [ ] T027 Update `README.md`: shelves in the punch, the three commands, the enable click, where shelves live, the container left behind, and running `punchr shelves --refresh` after `brew upgrade`
+- [x] T027 Update `README.md`: shelves in the punch, the three commands, the enable click, where shelves live, the container left behind, and running `punchr shelves --refresh` after `brew upgrade`
 - [ ] T028 [P] Add a `caveats` line about `punchr shelves --refresh` to the formula in `~/Privata/dev/homebrew-apps/Formula/punchr.rb` at the next release; do not push the tap without Egildo's yes
-- [ ] T029 Cross-read spec, plan, research, contract and code; amend the spec where the quickstart found otherwise; gate: `./build.sh` and `./build.sh check`; merge `shelves-round` into `main` with `--no-ff`
+- [x] T029 Cross-read spec, plan, research, contract and code; amend the spec where the quickstart found otherwise; gate: `./build.sh` and `./build.sh check`; merge `shelves-round` into `main` with `--no-ff`
 
 ---
 

@@ -46,3 +46,15 @@ Egildo accepted the consequence of aliases: they follow a folder that is moved o
 
 The check for comments written through Finder sometimes failed: Finder writes its `.DS_Store` when
 it gets round to it. The check now waits up to 5 seconds; six runs in a row passed.
+
+## Changing a shelf (quickstart steps 3 and 4, 2026-10-26)
+
+Both shelves were set up again first, so their apps record the punch they serve; "Clients" stayed
+enabled through it. With "Clients" open in Finder, `punchr unshelve … acme` and `punchr shelve …
+old` both finished at 22:21:06; one second later the shelf's folder held `old` and `zente`, and
+`punchr shelves` still read "Clients" as enabled. Adding the domain again with a new list does not
+ask to enable it again (`change-without-re-enabling`), so the research's fallback (a links file in
+the app group) is not needed.
+
+A file dragged onto "Clients" bounced back; the shelf kept exactly its two links and the log stayed
+quiet (no refusals, no re-indexing).

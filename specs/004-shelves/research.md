@@ -53,9 +53,9 @@ decisions. Everything registered for the tests was removed afterwards.
   `enumerateChanges` can report additions as updates and removals as deletions without any file.
 - **Rationale**: no state file of punchr's own; the system keeps the list with the shelf, and
   `punchr shelves` reads it back from the domain.
-- **Open, measured in the quickstart**: that adding an existing domain again keeps it enabled
-  (`change-without-re-enabling`). Fallback: a links file in the shelf's app-group container,
-  written by the host and read by the extension.
+- **Measured by eye (2026-10-26)**: adding an existing domain again keeps it enabled, and Finder
+  shows the new list within a second (`change-without-re-enabling`, `change-seen-quickly`). The
+  fallback (a links file in the app group) is not needed.
 
 ## Quiet writes
 

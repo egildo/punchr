@@ -53,13 +53,15 @@ func shelfEntitlements(_ group: String, sandboxed: Bool) throws -> Data {
 }
 
 // Copies the template and gives it the shelf's identifiers, name and symbol; signing and registering come after.
-func makeShelfApp(_ punch: String, _ d: ShelfDecl, template: URL, at app: URL) throws {
+// The app also records which punch and shelf it serves, so `punchr shelves` can find its punch again.
+func makeShelfApp(_ punch: String, _ d: ShelfDecl, punchFile: String = "", template: URL, at app: URL) throws {
   let ids = shelfIDs(punch, d.key), fm = FileManager.default
   try fm.createDirectory(at: app.deletingLastPathComponent(), withIntermediateDirectories: true)
   if fm.fileExists(atPath: app.path) { try fm.removeItem(at: app) }
   try fm.copyItem(at: template, to: app)
   try editPlist(app.appendingPathComponent("Contents/Info.plist")) {
     $0["CFBundleIdentifier"] = ids.app; $0["CFBundleName"] = d.name; $0["CFBundleDisplayName"] = d.name
+    $0["PunchrPunch"] = punch; $0["PunchrPunchFile"] = punchFile; $0["PunchrShelf"] = d.key; $0["PunchrSymbol"] = d.symbol
   }
   try editPlist(providerOf(app).appendingPathComponent("Contents/Info.plist")) {
     $0["CFBundleIdentifier"] = ids.provider
@@ -103,6 +105,7 @@ func setLinks(_ app: URL, _ ids: ShelfIDs, _ d: ShelfDecl, _ targets: [String]) 
 
 struct ShelfPlan {
   let punch: String
+  var punchFile = ""
   let shelf: ShelfDecl
   let app: URL
   var setUp = false // the shelf's app must be generated and registered first
@@ -111,6 +114,7 @@ struct ShelfPlan {
   var error: String?
   var enabled: Bool?
   var changes: Bool { setUp || before != after }
+  var removed: [String] { before.filter { !after.contains($0) } }
 }
 
 // Paths as given, made absolute against the current folder; `.` and `..` folded, links and /private never resolved.
@@ -118,17 +122,68 @@ func absolute(_ path: String) -> String {
   URL(fileURLWithPath: path, relativeTo: URL(fileURLWithPath: FileManager.default.currentDirectoryPath)).absoluteURL.standardized.path
 }
 
-// Shelve: the items not on the shelf yet go to its end, in the order given; an item already on it stays where it is.
-func planShelve(_ punch: Punch, _ d: ShelfDecl, _ items: [String], in folder: URL = shelvesFolder) -> ShelfPlan {
-  var p = ShelfPlan(punch: punch.name, shelf: d, app: shelfApp(d, in: folder))
+// The lists alone: shelving appends what is not there yet, in the order given; unshelving drops what is named.
+func shelved(_ before: [String], _ items: [String]) -> [String] {
+  items.map(absolute).reduce(into: before) { if !$0.contains($1) { $0.append($1) } }
+}
+func unshelved(_ before: [String], _ items: [String]) -> [String] {
+  let gone = Set(items.map(absolute)); return before.filter { !gone.contains($0) }
+}
+
+// What the system holds for the shelf now; a shelf whose app or domain is missing must be set up first.
+private func startPlan(_ punch: Punch, _ d: ShelfDecl, _ folder: URL) -> ShelfPlan {
+  var p = ShelfPlan(punch: punch.name, punchFile: punch.file, shelf: d, app: shelfApp(d, in: folder))
   if FileManager.default.fileExists(atPath: p.app.path) {
     do {
       if let s = try shelfStatus(p.app, shelfIDs(punch.name, d.key)) { p.before = s.links; p.enabled = s.enabled } else { p.setUp = true }
-    } catch { p.error = "\(d.name): \(error)"; return p }
+    } catch { p.error = "\(d.name): \(error)" }
   } else { p.setUp = true }
-  p.after = p.before
-  for item in items.map(absolute) where !p.after.contains(item) { p.after.append(item) }
   return p
+}
+
+// Shelve: the items not on the shelf yet go to its end, in the order given; an item already on it stays where it is.
+func planShelve(_ punch: Punch, _ d: ShelfDecl, _ items: [String], in folder: URL = shelvesFolder) -> ShelfPlan {
+  var p = startPlan(punch, d, folder)
+  p.after = shelved(p.before, items)
+  return p
+}
+
+// Unshelve: the items named leave the shelf; one not on it changes nothing. A shelf never set up has nothing to take off.
+func planUnshelve(_ punch: Punch, _ d: ShelfDecl, _ items: [String], in folder: URL = shelvesFolder) -> ShelfPlan {
+  var p = startPlan(punch, d, folder)
+  if p.setUp { p.setUp = false; return p }
+  p.after = unshelved(p.before, items)
+  return p
+}
+
+// A shelf set up on this Mac, as `punchr shelves` reports it.
+struct ShelfListing {
+  let app: URL
+  let punch: String, punchFile: String, key: String, name: String, symbol: String
+  var enabled: Bool?
+  var links: [String] = []
+  var declared = false
+  var error: String?
+}
+
+// Every shelf's app in the shelves folder, what the system holds for it, and whether its punch still declares it.
+func listShelves(in folder: URL = shelvesFolder) -> [ShelfListing] {
+  let apps = ((try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [])
+    .filter { $0.pathExtension == "app" }.sorted { $0.lastPathComponent < $1.lastPathComponent }
+  return apps.map { app in
+    let info = Bundle(url: app)?.infoDictionary ?? [:]
+    func s(_ k: String) -> String { info[k] as? String ?? "" }
+    var l = ShelfListing(app: app, punch: s("PunchrPunch"), punchFile: s("PunchrPunchFile"), key: s("PunchrShelf"),
+                         name: s("CFBundleName"), symbol: s("PunchrSymbol"))
+    if l.punch.isEmpty || l.key.isEmpty { l.error = "made before shelves recorded their punch: set it up again"; return l }
+    do {
+      if let st = try shelfStatus(app, shelfIDs(l.punch, l.key)) { l.enabled = st.enabled; l.links = st.links }
+      else { l.error = "the system has no shelf for it" }
+    } catch { l.error = "\(error)" }
+    let file = l.punchFile.isEmpty ? punchURL(l.punch) : URL(fileURLWithPath: l.punchFile)
+    l.declared = (try? readPunch(file))?.shelves[l.key] != nil
+    return l
+  }
 }
 
 // Generates and registers the shelf when needed, then gives its domain the new list.
@@ -141,7 +196,7 @@ func carryOut(_ p: ShelfPlan, template: URL = shelfTemplate) -> ShelfPlan {
       if let other = Bundle(url: p.app)?.bundleIdentifier, other != ids.app {
         throw ShelfError(description: "\(p.app.path) belongs to another shelf (\(other))")
       }
-      try makeShelfApp(p.punch, p.shelf, template: template, at: p.app)
+      try makeShelfApp(p.punch, p.shelf, punchFile: p.punchFile, template: template, at: p.app)
       try signAndRegister(p.app, ids)
     }
     try setLinks(p.app, ids, p.shelf, p.after)

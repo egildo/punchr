@@ -44,8 +44,10 @@ After writing, `✓ Clients` or `✗ Clients: <reason>`. A shelf set up but not 
 }
 ```
 
-`links` is the whole shelf after the change, in shelving order; `new` marks what this call adds.
-`enabled` is `null` until the shelf is set up. A failure adds `"error"`.
+`links` is the whole shelf after the change, in shelving order; `new` marks what this call adds;
+`removed` lists the targets this call takes off (`unshelve --json` answers in the same shape).
+`enabled` is `null` until the shelf is set up. A failure adds `"error"`. Unshelving from a shelf
+that was never set up changes nothing.
 
 ## `punchr shelves`
 
@@ -74,7 +76,10 @@ Archive (archivebox)   old/archive    not enabled yet
 ```
 
 A shelf set up on this Mac but no longer declared shows `"declared": false`; `--tidy` removes
-exactly those.
+exactly those. A shelf's app records the punch file it was made from, so a punch given by path is
+found again. A shelf the listing cannot read adds `"error"` (for instance one made before shelves
+recorded their punch, which must be set up again) and makes the status 1. With no shelves at all,
+the terminal says `no shelves`.
 
 ## Exit status
 

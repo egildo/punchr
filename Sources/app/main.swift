@@ -6,6 +6,8 @@ let usage = """
          punchr read <folder>... [--punch <punch>]... [--json]
          punchr clear <punch> <folder>... [--force] [--live] [--json]
          punchr shelve <punch> <shelf> <item>... [--force] [--json]
+         punchr unshelve <punch> <shelf> <item>... [--force] [--json]
+         punchr shelves [--json]
   """
 
 var args = Array(CommandLine.arguments.dropFirst())
@@ -93,8 +95,8 @@ func run(_ verb: String, _ punch: Punch, _ header: [String: Any], _ plans: [Fold
   exit(plans.contains { $0.error != nil } ? 1 : 0)
 }
 
-// Shelve (specs/004-shelves/contracts/cli.md): plans, then asks or stops as strike does.
-func runShelve(_ plan: ShelfPlan) -> Never {
+// Shelve and unshelve (specs/004-shelves/contracts/cli.md): plan, then ask or stop as strike does.
+func runShelf(_ verb: String, _ plan: ShelfPlan) -> Never {
   var p = plan
   let links = shelfLinks(p.after)
   if !json {
@@ -107,11 +109,12 @@ func runShelve(_ plan: ShelfPlan) -> Never {
         let missing = FileManager.default.fileExists(atPath: l.target) ? "" : "   missing"
         print(p.before.contains(l.target) ? "    = \(l.target)         already on the shelf" : "    + \(l.target)\(renamed)\(missing)")
       }
+      for t in p.removed { print("    − \(t)") }
     }
   }
   var write = force
   if !force && !json && p.error == nil && p.changes && isatty(0) == 1 && isatty(1) == 1 {
-    print("Shelve? [y/N] ", terminator: ""); write = readLine()?.lowercased() == "y"
+    print("\(verb.prefix(1).uppercased() + verb.dropFirst())? [y/N] ", terminator: ""); write = readLine()?.lowercased() == "y"
   }
   let wrote = write && p.error == nil && p.changes
   if wrote {
@@ -125,7 +128,8 @@ func runShelve(_ plan: ShelfPlan) -> Never {
     var doc: [String: Any] = ["punch": p.punch, "shelf": p.shelf.key, "name": p.shelf.name, "symbol": p.shelf.symbol,
                               "setUp": p.setUp, "written": wrote, "enabled": p.enabled as Any? ?? NSNull(),
                               "links": links.map { ["name": $0.name, "target": $0.target, "new": !p.before.contains($0.target),
-                                                    "exists": FileManager.default.fileExists(atPath: $0.target)] }]
+                                                    "exists": FileManager.default.fileExists(atPath: $0.target)] },
+                              "removed": p.removed]
     if let e = p.error { doc["error"] = e }
     emit(doc)
   }
@@ -137,7 +141,37 @@ case "shelve":
   guard args.count >= 4 else { fail("shelve needs a punch, a shelf and at least one item\n\(usage)") }
   let punch = load(args[1])
   guard let shelf = punch.shelves[args[2]] else { fail("punch \(punch.name) declares no shelf \(args[2])") }
-  runShelve(planShelve(punch, shelf, Array(args.dropFirst(3))))
+  runShelf("shelve", planShelve(punch, shelf, Array(args.dropFirst(3))))
+case "unshelve":
+  guard args.count >= 4 else { fail("unshelve needs a punch, a shelf and at least one item\n\(usage)") }
+  let punch = load(args[1])
+  guard let shelf = punch.shelves[args[2]] else { fail("punch \(punch.name) declares no shelf \(args[2])") }
+  runShelf("unshelve", planUnshelve(punch, shelf, Array(args.dropFirst(3))))
+case "shelves":
+  // Every shelf on this Mac and its links (read-a-shelf); reads only.
+  let shelves = listShelves()
+  let exists = { (t: String) in FileManager.default.fileExists(atPath: t) }
+  if json {
+    emit(["shelves": shelves.map { l -> [String: Any] in
+      var d: [String: Any] = ["punch": l.punch, "shelf": l.key, "name": l.name, "symbol": l.symbol,
+                              "enabled": l.enabled as Any? ?? NSNull(), "declared": l.declared,
+                              "links": shelfLinks(l.links).map { ["name": $0.name, "target": $0.target, "exists": exists($0.target)] }]
+      if let e = l.error { d["error"] = e }
+      return d
+    }])
+  } else if shelves.isEmpty {
+    print("no shelves")
+  } else {
+    for l in shelves {
+      let state = l.error.map { "✗ \($0)" } ?? (l.enabled == true ? "enabled" : "not enabled yet")
+      print("\(l.name) (\(l.symbol))   \(l.punch)/\(l.key)   \(state)\(l.declared ? "" : "   no longer declared")")
+      let links = shelfLinks(l.links), width = links.map(\.name.count).max() ?? 0
+      for k in links {
+        print("    \(k.name.padding(toLength: width, withPad: " ", startingAt: 0)) → \(k.target)\(exists(k.target) ? "" : "     missing")")
+      }
+    }
+  }
+  exit(shelves.contains { $0.error != nil } ? 1 : 0)
 case "strike":
   guard args.count >= 4 else { fail("strike needs a punch, a look and at least one folder\n\(usage)") }
   let punch = loadToWrite(args[1])

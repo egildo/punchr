@@ -80,10 +80,10 @@ without enabling again; `punchr shelves` lists every shelf and its links.
 
 **Independent Test**: quickstart section 2, step 3, and `punchr shelves`.
 
-- [ ] T018 [US2] In `Sources/core/Shelves.swift`, the plan for `unshelve` (`−` for each item on the shelf, nothing for an item not on it) and carrying it out through the host's `add` with the shorter list
-- [ ] T019 [US2] In `Sources/core/Shelves.swift`, list shelves: every app under `~/Library/Application Support/punchr/Shelves/`, its host's `status`, whether a punch in the punch folder still declares it, and for each link whether its target exists (`read-a-shelf`)
-- [ ] T020 [US2] In `Sources/app/main.swift`, wire `unshelve` (question `Unshelve? [y/N]`) and `shelves` (terminal lines and JSON as in `contracts/cli.md`)
-- [ ] T021 [P] [US2] In `Sources/checks/main.swift`, check the `shelve` and `unshelve` plans on a shelf whose list is given: adding an item already on it plans nothing; removing an item not on it plans nothing; a missing target is reported `missing` by the listing
+- [x] T018 [US2] In `Sources/core/Shelves.swift`, the plan for `unshelve` (`−` for each item on the shelf, nothing for an item not on it) and carrying it out through the host's `add` with the shorter list
+- [x] T019 [US2] In `Sources/core/Shelves.swift`, list shelves: every app under `~/Library/Application Support/punchr/Shelves/`, its host's `status`, whether a punch in the punch folder still declares it, and for each link whether its target exists (`read-a-shelf`)
+- [x] T020 [US2] In `Sources/app/main.swift`, wire `unshelve` (question `Unshelve? [y/N]`) and `shelves` (terminal lines and JSON as in `contracts/cli.md`)
+- [x] T021 [P] [US2] In `Sources/checks/main.swift`, check the `shelve` and `unshelve` plans on a shelf whose list is given: adding an item already on it plans nothing; removing an item not on it plans nothing; a missing target is reported `missing` by the listing
 - [ ] T022 [US2] Run `./build.sh check`; then, with Egildo, quickstart section 2, steps 3 and 4; if adding the domain again asks to enable it again (`change-without-re-enabling`), switch to the fallback in research (a links file in the app group, read by the extension) before going on
 
 **Checkpoint**: a shelf's contents change in place.

@@ -348,5 +348,28 @@ check("a-shelf-owns-no-attributes") {
              "identifiers")
 }
 
+check("shelve and unshelve plans") {
+  let before = ["/a/zente", "/a/acme"]
+  try expect(shelved(before, ["/a/acme", "/a/old", "/a/old"]) == ["/a/zente", "/a/acme", "/a/old"], "shelving")
+  try expect(shelved(before, ["/a/zente"]) == before, "shelving an item already on the shelf changed it")
+  try expect(unshelved(before, ["/a/acme"]) == ["/a/zente"], "unshelving")
+  try expect(unshelved(before, ["/a/nope"]) == before, "unshelving an item not on the shelf changed it")
+  try expect(unshelved(before, ["/a/x/../acme"]) == ["/a/zente"], "a path with .. not folded")
+}
+
+check("read-a-shelf: the listing finds its punch") {
+  let p = try punch("listed", "{ shelves: { clients: { name: 'Listed', symbol: 'person.2' } } }")
+  let shelves = URL(fileURLWithPath: "\(root)/Listed")
+  let template = URL(fileURLWithPath: "build/Punchr.app/Contents/Resources/Shelf.app")
+  try makeShelfApp(p.name, p.shelves["clients"]!, punchFile: p.file, template: template, at: shelfApp(p.shelves["clients"]!, in: shelves))
+  let l = listShelves(in: shelves)
+  try expect(l.count == 1 && l[0].name == "Listed" && l[0].symbol == "person.2" && l[0].key == "clients" && l[0].punch == "listed",
+             "listing \(l)")
+  try expect(l[0].declared, "its punch's shelf not found")
+  try "{ shelves: {} }".write(toFile: p.file, atomically: true, encoding: .utf8)
+  try expect(!listShelves(in: shelves)[0].declared, "a shelf the punch dropped still reads as declared")
+  try expect(l[0].error != nil, "an unregistered shelf reported no problem") // never registered: the system has none
+}
+
 try? fm.removeItem(atPath: root)
 exit(failures == 0 ? 0 : 1)

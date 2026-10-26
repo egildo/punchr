@@ -48,6 +48,7 @@ struct Punch {
   let ownsComment: Bool
   let looks: [String: Look]
   var shelves: [String: ShelfDecl] = [:]
+  var file = "" // the punch file's absolute path
 }
 
 struct Problem { let at: String; let problem: String }
@@ -185,7 +186,7 @@ func readPunch(_ url: URL) throws -> Punch {
 
   if !problems.isEmpty { throw Refused(problems: problems) }
   return Punch(name: url.deletingPathExtension().lastPathComponent, ownedTags: Set(ownedTags),
-               ownsStamp: ownsStamp, ownsIcon: ownsIcon, ownsComment: ownsComment, looks: looks, shelves: shelves)
+               ownsStamp: ownsStamp, ownsIcon: ownsIcon, ownsComment: ownsComment, looks: looks, shelves: shelves, file: url.absoluteURL.standardized.path)
 }
 
 // Under --live a punch may own only live parts: the comment, and badges once they exist (live-owns-only-comments).

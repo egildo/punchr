@@ -78,8 +78,10 @@ decisions. Everything registered for the tests was removed afterwards.
 - **Decision**: `punchr shelves --refresh` regenerates every shelf's app from the current
   template: unregister, replace, re-sign, register, add the domain again with its `userInfo`.
   Homebrew's formula prints a caveat to run it after an upgrade.
-- **Open, measured in the quickstart**: whether the domain and its enabled state survive the
-  unregistering; if not, refresh tells the user to enable once more.
+- **Measured (2026-10-26)**: the domain and its enabled state survive. Registering right after
+  unregistering races the system, which may drop the new registration: unregistering waits 2
+  seconds, adding a domain retries and registers again while the system reports the extension
+  missing (-2014), and refresh re-registers any shelf the system has dropped before reading it.
 
 ## Reusing what exists
 

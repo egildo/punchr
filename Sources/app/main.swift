@@ -150,7 +150,8 @@ case "unshelve":
 case "shelves" where args.count == 2 && ["--refresh", "--tidy"].contains(args[1]):
   // Refresh rebuilds every readable shelf from the current template; tidy removes those no punch declares.
   let refresh = args[1] == "--refresh", verb = refresh ? "refresh" : "tidy"
-  let all = listShelves()
+  var all = listShelves()
+  if refresh && registerLost(all) { all = listShelves() }
   let chosen = all.filter { $0.error == nil && (refresh || !$0.declared) }
   var failed: [String: String] = [:]
   for l in all where l.error != nil { failed[l.name] = l.error! }

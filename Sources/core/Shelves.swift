@@ -84,6 +84,10 @@ func signAndRegister(_ app: URL, _ ids: ShelfIDs) throws {
   try shelfEntitlements(ids.group, sandboxed: false).write(to: own)
   try tool("/usr/bin/codesign", ["-f", "-s", "-", "--entitlements", ext.path, providerOf(app).path])
   try tool("/usr/bin/codesign", ["-f", "-s", "-", "--entitlements", own.path, app.path])
+  try register(app)
+}
+
+func register(_ app: URL) throws {
   try tool(lsregister, ["-f", "-R", app.path])
   try tool("/usr/bin/pluginkit", ["-a", providerOf(app).path])
 }
@@ -101,7 +105,16 @@ func setLinks(_ app: URL, _ ids: ShelfIDs, _ d: ShelfDecl, _ targets: [String]) 
   let file = FileManager.default.temporaryDirectory.appendingPathComponent("punchr-links-\(getpid())")
   try joinLinks(targets).write(to: file, atomically: true, encoding: .utf8)
   defer { try? FileManager.default.removeItem(at: file) }
-  try tool(host(app), ["add", ids.domain, d.name, file.path])
+  // Right after registering, the system may not know the extension yet (-2001 over -2014), or may drop it
+  // while it finishes unregistering the old app: try again for a while, registering again each time.
+  // ponytail: a fixed 15 tries a second apart; a launchd-style wait if shelves ever take longer to come up.
+  for attempt in 1...15 {
+    do { try tool(host(app), ["add", ids.domain, d.name, file.path]); return } catch {
+      guard attempt < 15, "\(error)".contains("-2014") else { throw error }
+      Thread.sleep(forTimeInterval: 1)
+      try register(app)
+    }
+  }
 }
 
 struct ShelfPlan {
@@ -212,6 +225,7 @@ private func unregister(_ app: URL) throws {
   _ = try? tool("/usr/bin/pluginkit", ["-r", providerOf(app).path])
   _ = try? tool(lsregister, ["-u", app.path])
   try FileManager.default.removeItem(at: app)
+  Thread.sleep(forTimeInterval: 2) // let the system finish forgetting it before the new app registers
 }
 
 // Tidy: the shelf's row and folder go (the system removes both with the domain), then its app (take-a-shelf-away).
@@ -238,4 +252,13 @@ func refreshShelf(_ l: ShelfListing, template: URL = shelfTemplate, in folder: U
   try signAndRegister(app, ids)
   try setLinks(app, ids, d, l.links)
   return app
+}
+
+// A shelf whose app the system has dropped (-2014) cannot even be read; refresh registers such apps again first,
+// so they can be read and rebuilt. Returns whether any was.
+func registerLost(_ shelves: [ShelfListing]) -> Bool {
+  let lost = shelves.filter { $0.error?.contains("-2014") == true }
+  for l in lost { _ = try? register(l.app) }
+  if !lost.isEmpty { Thread.sleep(forTimeInterval: 3) }
+  return !lost.isEmpty
 }

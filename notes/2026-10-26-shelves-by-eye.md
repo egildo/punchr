@@ -58,3 +58,19 @@ the app group) is not needed.
 
 A file dragged onto "Clients" bounced back; the shelf kept exactly its two links and the log stayed
 quiet (no refusals, no re-indexing).
+
+## Refresh and tidy (quickstart steps 5 and 6, 2026-10-26)
+
+- **The first refresh failed** for both shelves with -2001 over -2014, "no launchable extension":
+  it unregistered each app and registered the new one in the same second, and the system, finishing
+  the unregistering a moment later, dropped the new registration. "Old Work" was left unreadable.
+  Now unregistering waits 2 seconds, adding a domain retries for up to 15 seconds and registers the
+  app again each time the system has lost it, and `--refresh` first re-registers any shelf the
+  system has dropped. Then both refreshed, twice in a row; "Clients" stayed enabled, links intact.
+- **Tidy**: with the shelves gone from the scratch punch, `punchr shelves` marked both "no longer
+  declared" and `--tidy` removed both: their apps, their folders under `~/Library/CloudStorage`,
+  their registrations; `punchr shelves` then said "no shelves". The scratch folders were byte for
+  byte as before, attributes and contents (`nothing-touched`).
+- **Left behind**, as expected: an empty 32 KB sandbox container per shelf extension ever made, five
+  from the spikes and this test (`~/Library/Containers/local.punchr.shelf*.provider`), which a shell
+  may not delete and Finder can bin.

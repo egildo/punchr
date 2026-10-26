@@ -6,7 +6,7 @@
 <key>CFBundleName</key><string>ShelfProvider</string>
 <key>CFBundlePackageType</key><string>XPC!</string>
 <key>CFBundleVersion</key><string>1</string>
-<key>CFBundleShortVersionString</key><string>1</string>
+<key>CFBundleShortVersionString</key><string>0.4.0</string>
 <key>LSMinimumSystemVersion</key><string>26.0</string>
 <key>CFBundleIcons</key><dict><key>CFBundlePrimaryIcon</key><dict><key>CFBundleSymbolName</key><string>books.vertical</string></dict></dict>
 <key>NSExtension</key><dict>

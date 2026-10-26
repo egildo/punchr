@@ -97,9 +97,9 @@ after an upgrade.
 
 **Independent Test**: quickstart section 2, steps 5 and 6.
 
-- [ ] T023 [US3] In `Sources/core/Shelves.swift`, `--tidy`: for each shelf not declared, plan `− <name>`; carrying it out calls the host's `remove`, then `pluginkit -r`, `lsregister -u`, and deletes the shelf's app; the system removes its folder under `~/Library/CloudStorage` (`take-a-shelf-away`); say that macOS keeps an empty 32 KB container in `~/Library/Containers/` that Finder can bin
-- [ ] T024 [US3] In `Sources/core/Shelves.swift`, `--refresh`: for each shelf, read its links through `status`, then unregister, regenerate from the current template (T013), register, and `add` again with the same links (`shelves-survive-a-rebuild`)
-- [ ] T025 [US3] In `Sources/app/main.swift`, wire `shelves --tidy` and `shelves --refresh` with their plans and questions (`Tidy? [y/N]`, `Refresh? [y/N]`)
+- [x] T023 [US3] In `Sources/core/Shelves.swift`, `--tidy`: for each shelf not declared, plan `− <name>`; carrying it out calls the host's `remove`, then `pluginkit -r`, `lsregister -u`, and deletes the shelf's app; the system removes its folder under `~/Library/CloudStorage` (`take-a-shelf-away`); say that macOS keeps an empty 32 KB container in `~/Library/Containers/` that Finder can bin
+- [x] T024 [US3] In `Sources/core/Shelves.swift`, `--refresh`: for each shelf, read its links through `status`, then unregister, regenerate from the current template (T013), register, and `add` again with the same links (`shelves-survive-a-rebuild`)
+- [x] T025 [US3] In `Sources/app/main.swift`, wire `shelves --tidy` and `shelves --refresh` with their plans and questions (`Tidy? [y/N]`, `Refresh? [y/N]`)
 - [ ] T026 [US3] With Egildo, quickstart section 2, steps 5 and 6; record whether a refresh asks to enable again, and check that the scratch folders are byte for byte as before (`nothing-touched`)
 
 **Checkpoint**: shelves come and go cleanly.

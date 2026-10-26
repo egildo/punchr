@@ -81,6 +81,27 @@ found again. A shelf the listing cannot read adds `"error"` (for instance one ma
 recorded their punch, which must be set up again) and makes the status 1. With no shelves at all,
 the terminal says `no shelves`.
 
+## `--refresh` and `--tidy`
+
+Plan lines, then the question, as above:
+
+```
+· Clients (person.2)   client/clients   ↻ 2 links
+· Archive (archivebox)   old/archive   − no longer declared
+```
+
+`--refresh` takes every shelf it can read, rebuilds its app from the current template under the
+name and symbol its punch declares now (or as recorded, if the punch is gone) and gives it its
+links again; the shelf stays enabled. `--tidy` takes only the shelves no punch declares, removes
+their domain (the row and its folder go with it) and their app, then says that macOS keeps an
+empty 32 KB container per removed shelf. A shelf the listing cannot read is reported and left
+alone. `--json`:
+
+```json
+{ "action": "tidy", "written": true,
+  "shelves": [ { "punch": "old", "shelf": "archive", "name": "Archive", "done": true, "error": null } ] }
+```
+
 ## Exit status
 
 | Status | Meaning |

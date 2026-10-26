@@ -7,7 +7,7 @@ let usage = """
          punchr clear <punch> <folder>... [--force] [--live] [--json]
          punchr shelve <punch> <shelf> <item>... [--force] [--json]
          punchr unshelve <punch> <shelf> <item>... [--force] [--json]
-         punchr shelves [--json]
+         punchr shelves [--refresh | --tidy] [--force] [--json]
   """
 
 var args = Array(CommandLine.arguments.dropFirst())
@@ -147,6 +147,43 @@ case "unshelve":
   let punch = load(args[1])
   guard let shelf = punch.shelves[args[2]] else { fail("punch \(punch.name) declares no shelf \(args[2])") }
   runShelf("unshelve", planUnshelve(punch, shelf, Array(args.dropFirst(3))))
+case "shelves" where args.count == 2 && ["--refresh", "--tidy"].contains(args[1]):
+  // Refresh rebuilds every readable shelf from the current template; tidy removes those no punch declares.
+  let refresh = args[1] == "--refresh", verb = refresh ? "refresh" : "tidy"
+  let all = listShelves()
+  let chosen = all.filter { $0.error == nil && (refresh || !$0.declared) }
+  var failed: [String: String] = [:]
+  for l in all where l.error != nil { failed[l.name] = l.error! }
+  if !json {
+    for l in all where l.error != nil { print("✗ \(l.name): \(l.error!)") }
+    if chosen.isEmpty { print(refresh ? "no shelves to refresh" : "nothing to tidy: every shelf is declared") }
+    for l in chosen {
+      print(refresh ? "· \(l.name) (\(l.symbol))   \(l.punch)/\(l.key)   ↻ \(l.links.count) link\(l.links.count == 1 ? "" : "s")"
+                    : "· \(l.name) (\(l.symbol))   \(l.punch)/\(l.key)   − no longer declared")
+    }
+  }
+  var write = force
+  if !force && !json && !chosen.isEmpty && isatty(0) == 1 && isatty(1) == 1 {
+    print("\(verb.prefix(1).uppercased() + verb.dropFirst())? [y/N] ", terminator: ""); write = readLine()?.lowercased() == "y"
+  }
+  var done: [String] = []
+  if write {
+    for l in chosen {
+      do {
+        if refresh { _ = try refreshShelf(l) } else { try removeShelf(l) }
+        done.append(l.name); if !json { print("✓ \(l.name)") }
+      } catch { failed[l.name] = "\(error)"; if !json { print("✗ \(l.name): \(error)") } }
+    }
+    if !json && !refresh && !done.isEmpty {
+      print("  macOS keeps an empty 32 KB container per removed shelf in ~/Library/Containers/local.punchr.shelf.*; Finder can bin it.")
+    }
+  }
+  if json {
+    emit(["action": verb, "written": write && !chosen.isEmpty,
+          "shelves": chosen.map { ["punch": $0.punch, "shelf": $0.key, "name": $0.name, "done": done.contains($0.name),
+                                   "error": failed[$0.name] as Any? ?? NSNull()] }])
+  }
+  exit(failed.isEmpty ? 0 : 1)
 case "shelves":
   // Every shelf on this Mac and its links (read-a-shelf); reads only.
   let shelves = listShelves()

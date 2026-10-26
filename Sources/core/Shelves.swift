@@ -26,6 +26,8 @@ var shelfTemplate: URL {
 func shelfApp(_ d: ShelfDecl, in folder: URL = shelvesFolder) -> URL { folder.appendingPathComponent("\(d.name).app") }
 private func providerOf(_ app: URL) -> URL { app.appendingPathComponent("Contents/PlugIns/ShelfProvider.appex") }
 
+let lsregister = "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+
 @discardableResult
 func tool(_ path: String, _ args: [String]) throws -> String {
   let p = Process(), out = Pipe(), err = Pipe()
@@ -82,8 +84,7 @@ func signAndRegister(_ app: URL, _ ids: ShelfIDs) throws {
   try shelfEntitlements(ids.group, sandboxed: false).write(to: own)
   try tool("/usr/bin/codesign", ["-f", "-s", "-", "--entitlements", ext.path, providerOf(app).path])
   try tool("/usr/bin/codesign", ["-f", "-s", "-", "--entitlements", own.path, app.path])
-  try tool("/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister",
-           ["-f", "-R", app.path])
+  try tool(lsregister, ["-f", "-R", app.path])
   try tool("/usr/bin/pluginkit", ["-a", providerOf(app).path])
 }
 
@@ -203,4 +204,38 @@ func carryOut(_ p: ShelfPlan, template: URL = shelfTemplate) -> ShelfPlan {
     p.enabled = try shelfStatus(p.app, ids)?.enabled
   } catch { p.error = "\(p.shelf.name): \(error)" }
   return p
+}
+
+// Takes a shelf's app off the system's books and deletes it. Unregistering first matters: a bundle replaced in
+// place is forgotten by the system (notes/2026-10-25-shelf-spike.md). Either step may find nothing to do.
+private func unregister(_ app: URL) throws {
+  _ = try? tool("/usr/bin/pluginkit", ["-r", providerOf(app).path])
+  _ = try? tool(lsregister, ["-u", app.path])
+  try FileManager.default.removeItem(at: app)
+}
+
+// Tidy: the shelf's row and folder go (the system removes both with the domain), then its app (take-a-shelf-away).
+// macOS keeps the extension's empty sandbox container, which a shell may not delete.
+func removeShelf(_ l: ShelfListing) throws {
+  try tool(host(l.app), ["remove", shelfIDs(l.punch, l.key).domain])
+  try unregister(l.app)
+}
+
+// The shelf as its punch declares it now, so a new name or symbol reaches the row; as recorded when the punch is gone.
+func currentDecl(_ l: ShelfListing) -> ShelfDecl {
+  let file = l.punchFile.isEmpty ? punchURL(l.punch) : URL(fileURLWithPath: l.punchFile)
+  return (try? readPunch(file))?.shelves[l.key] ?? ShelfDecl(key: l.key, name: l.name, symbol: l.symbol)
+}
+
+// Refresh: the shelf's app is made again from the current template, under its punch's current name and symbol
+// when the punch still declares it, and given its links again (shelves-survive-a-rebuild).
+// The domain stays, and with it the user's enabling.
+func refreshShelf(_ l: ShelfListing, template: URL = shelfTemplate, in folder: URL = shelvesFolder) throws -> URL {
+  let d = currentDecl(l)
+  let ids = shelfIDs(l.punch, l.key), app = shelfApp(d, in: folder)
+  try unregister(l.app)
+  try makeShelfApp(l.punch, d, punchFile: l.punchFile, template: template, at: app)
+  try signAndRegister(app, ids)
+  try setLinks(app, ids, d, l.links)
+  return app
 }

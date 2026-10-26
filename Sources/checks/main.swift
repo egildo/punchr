@@ -371,5 +371,14 @@ check("read-a-shelf: the listing finds its punch") {
   try expect(l[0].error != nil, "an unregistered shelf reported no problem") // never registered: the system has none
 }
 
+check("shelves-survive-a-rebuild: refresh takes the punch's current name and symbol") {
+  let p = try punch("refreshed", "{ shelves: { k: { name: 'Before', symbol: 'star' } } }")
+  let l = ShelfListing(app: URL(fileURLWithPath: "/nowhere.app"), punch: p.name, punchFile: p.file, key: "k", name: "Before", symbol: "star")
+  try "{ shelves: { k: { name: 'After', symbol: 'person.2' } } }".write(toFile: p.file, atomically: true, encoding: .utf8)
+  try expect(currentDecl(l) == ShelfDecl(key: "k", name: "After", symbol: "person.2"), "\(currentDecl(l))")
+  try fm.removeItem(atPath: p.file)
+  try expect(currentDecl(l) == ShelfDecl(key: "k", name: "Before", symbol: "star"), "without its punch: \(currentDecl(l))")
+}
+
 try? fm.removeItem(atPath: root)
 exit(failures == 0 ? 0 : 1)

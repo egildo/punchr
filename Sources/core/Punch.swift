@@ -37,6 +37,9 @@ struct Look {
   let isBadge: Bool
 }
 
+// A shelf declared in a punch: its key (part of its identifiers), its row's name and its SF Symbol.
+struct ShelfDecl: Equatable { let key: String; let name: String; let symbol: String }
+
 struct Punch {
   let name: String
   let ownedTags: Set<String>
@@ -44,6 +47,8 @@ struct Punch {
   let ownsIcon: Bool
   let ownsComment: Bool
   let looks: [String: Look]
+  var shelves: [String: ShelfDecl] = [:]
+  var file = "" // the punch file's absolute path
 }
 
 struct Problem { let at: String; let problem: String }
@@ -83,7 +88,7 @@ func readPunch(_ url: URL) throws -> Punch {
   } catch {
     throw Refused(problems: [Problem(at: "", problem: "\(url.path): \(error.localizedDescription)")])
   }
-  unknownKeys(top, ["owns", "looks"], "")
+  unknownKeys(top, ["owns", "looks", "shelves"], "")
 
   let owns = top["owns"] as? [String: Any] ?? [:]
   if top["owns"] != nil && top["owns"] as? [String: Any] == nil { problem("owns", "must be an object") }
@@ -97,9 +102,31 @@ func readPunch(_ url: URL) throws -> Punch {
   }
   let ownsStamp = flag("stamp"), ownsIcon = flag("icon"), ownsComment = flag("comment")
 
+  // Shelves (punch-declares-shelves); a punch may have shelves and no looks.
+  var shelves: [String: ShelfDecl] = [:]
+  if let v = top["shelves"] {
+    if let raw = v as? [String: Any] {
+      func fits(_ s: String, _ allowed: CharacterSet) -> Bool { !s.isEmpty && s.unicodeScalars.allSatisfy(allowed.contains) }
+      let lower = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyz0123456789-")
+      let symbolChars = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "."))
+      for key in raw.keys.sorted() {
+        let at = "shelves.\(key)"
+        if !fits(key, lower) { problem(at, "a shelf's key is lowercase letters, digits and hyphens") }
+        guard let d = raw[key] as? [String: Any] else { problem(at, "must be { name, symbol }"); continue }
+        unknownKeys(d, ["name", "symbol"], at)
+        let name = d["name"] as? String ?? "", symbol = d["symbol"] as? String ?? ""
+        if name.isEmpty || name.count > 40 || name.contains("/") { problem("\(at).name", "1 to 40 characters, no /") }
+        if !fits(symbol, symbolChars) { problem("\(at).symbol", "an SF Symbol name: letters, digits and dots") }
+        shelves[key] = ShelfDecl(key: key, name: name, symbol: symbol)
+      }
+    } else { problem("shelves", "must be an object") }
+  }
+
   var looks: [String: Look] = [:]
-  guard let rawLooks = top["looks"] as? [String: Any], !rawLooks.isEmpty else {
-    problem("looks", "must name at least one look")
+  let rawLooks = top["looks"] as? [String: Any] ?? [:]
+  if top["looks"] != nil && top["looks"] as? [String: Any] == nil { problem("looks", "must be an object") }
+  if rawLooks.isEmpty && shelves.isEmpty {
+    problem("looks", "must name at least one look, or the punch at least one shelf")
     throw Refused(problems: problems)
   }
   for name in rawLooks.keys.sorted() {
@@ -159,7 +186,7 @@ func readPunch(_ url: URL) throws -> Punch {
 
   if !problems.isEmpty { throw Refused(problems: problems) }
   return Punch(name: url.deletingPathExtension().lastPathComponent, ownedTags: Set(ownedTags),
-               ownsStamp: ownsStamp, ownsIcon: ownsIcon, ownsComment: ownsComment, looks: looks)
+               ownsStamp: ownsStamp, ownsIcon: ownsIcon, ownsComment: ownsComment, looks: looks, shelves: shelves, file: url.absoluteURL.standardized.path)
 }
 
 // Under --live a punch may own only live parts: the comment, and badges once they exist (live-owns-only-comments).

@@ -1,0 +1,110 @@
+# Research: Shelves
+
+Measured on 2026-10-25, macOS 26.6.2, Command Line Tools with Swift 6.3.3. The first spike is in
+[its note](../../notes/2026-10-25-shelf-spike.md); this file adds the second test and the
+decisions. Everything registered for the tests was removed afterwards.
+
+## One symbol per shelf (the first question)
+
+- **The SDK**: neither `NSFileProviderDomain` nor `NSFileProviderManager` has any icon, image or
+  symbol property. The sidebar symbol is the extension's `CFBundleSymbolName`.
+- **The scratch test**: app A (one extension, symbol `person.2`) served two domains, Alpha and
+  Beta; app B was made by copying app A, changing only its identifiers and its symbol (`star`)
+  with `plutil`, and re-signing ad hoc, with no compiling. All three domains were accepted.
+  Finder's sidebar showed:
+
+  | Row | Symbol |
+  |---|---|
+  | ShelfA - Alpha | two people |
+  | ShelfA - Beta | two people |
+  | ShelfB | star |
+
+- **Decision**: one small generated app per shelf, holding one shelf extension and serving one
+  domain. Its symbol is the shelf's; its name is the shelf's, and a single domain shows the app's
+  name alone, so the row reads exactly as the shelf is named.
+- **Rationale**: the only way to give two rows two symbols is two extensions; a copy edited and
+  re-signed at run time works, so punchr can make one per shelf from a template without the
+  Command Line Tools on the user's machine.
+- **Alternatives considered**: one extension serving every shelf (rows read "App - Shelf" and
+  share one symbol, which the spec rules out); building each shelf's extension from source when it
+  is set up (needs `swiftc` at run time; copying a signed template is enough).
+- **Open, measured in the quickstart**: the bundle was named `Shelf B` and the row read `ShelfB`.
+  Whether a name with spaces keeps them (from the bundle's file name, `CFBundleName` or
+  `CFBundleDisplayName`) is checked on the first real shelf, `Clients` and a two-word one.
+
+## Where shelves live
+
+- **Decision**: each shelf's app is generated in `~/Library/Application Support/punchr/Shelves/`,
+  named after the shelf, with identifiers derived from the punch and the shelf's key
+  (`local.punchr.shelf.<punch>.<key>`, app group `group.local.punchr.shelf.<punch>.<key>`). The
+  template app (a tiny host executable and the shelf extension) ships inside Punchr.app, in
+  `Contents/Resources/Shelf.app`, built by `build.sh`.
+- **Rationale**: outside Homebrew's Cellar, so `brew upgrade` does not move or delete them; the
+  same key gives the same identifiers, so a shelf made again reuses its sandbox container.
+- **Cost**: macOS keeps an empty sandbox container (32 KB) per shelf extension in
+  `~/Library/Containers/` and does not let a shell delete it; removing a shelf leaves that shell.
+
+## A shelf's list of links
+
+- **Decision**: the list lives in the domain's `userInfo` (one newline-joined string of paths,
+  the only shape accepted: plain strings, numbers, data and dates). `shelve` and `unshelve`
+  update it by adding the domain again with the new `userInfo`, as Apple's header says, then
+  signal the root enumerator. The extension's sync anchor carries the list itself, so
+  `enumerateChanges` can report additions as updates and removals as deletions without any file.
+- **Rationale**: no state file of punchr's own; the system keeps the list with the shelf, and
+  `punchr shelves` reads it back from the domain.
+- **Measured by eye (2026-10-26)**: adding an existing domain again keeps it enabled, and Finder
+  shows the new list within a second (`change-without-re-enabling`, `change-seen-quickly`). The
+  fallback (a links file in the app group) is not needed.
+
+## Quiet writes
+
+- **Decision**: the extension accepts what Finder writes onto its items and ignores it:
+  `modifyItem` answers with the item unchanged and no error; `deleteItem` and `createItem`
+  answer `NSFileProviderErrorExcludedFromSync`, so a drop onto a shelf stays out of it.
+- **Rationale**: the spike's error mark came from refusing every modification.
+- **Open, measured in the quickstart**: that no link shows a mark (`no-error-marks-seen`), and
+  what Finder shows after a drop.
+
+## Knowing whether a shelf is enabled
+
+- **Decision**: after setting a shelf up, punchr reads the domain's `userEnabled` and, when it is
+  false, says that Finder will ask once, in the shelf's row (`say-when-enabling-is-needed`).
+
+## Surviving a rebuild or an upgrade
+
+- **Measured in the spike**: replacing an extension's bundle in place made the system forget it;
+  unregistering and registering again brought it back.
+- **Decision**: `punchr shelves --refresh` regenerates every shelf's app from the current
+  template: unregister, replace, re-sign, register, add the domain again with its `userInfo`.
+  Homebrew's formula prints a caveat to run it after an upgrade.
+- **Measured (2026-10-26)**: the domain and its enabled state survive. Registering right after
+  unregistering races the system, which may drop the new registration: unregistering waits 2
+  seconds, adding a domain retries and registers again while the system reports the extension
+  missing (-2014), and refresh re-registers any shelf the system has dropped before reading it.
+
+## Reusing what exists
+
+- The host executable is a few dozen lines (add, remove, list a domain) and the extension is the
+  spike's `Shelf.swift` with quiet writes and change enumeration; both are compiled by `build.sh`
+  into the template, with no new dependency.
+- Generating a shelf uses `/usr/bin/plutil`, `/usr/bin/codesign`, `lsregister` and
+  `/usr/bin/pluginkit`, all on every Mac.
+
+## What a link is (settled by eye, 2026-10-26)
+
+- **Tried first: symbolic links.** They opened the real folders, but the system's File Provider
+  daemon then tried to read every target, its sandbox refused (about eight times a second per
+  link, wherever the target lived: `/private/tmp` and the `dev` volume alike), and Spotlight
+  re-indexed the shelf each time: the icons blinked. Reporting every link as changed on every
+  enumeration made it worse (the system rewrote the links, which counted as a change); now only new,
+  gone or renamed links are reported.
+- **Decision: Finder aliases.** A link is a small alias file, which the daemon has no reason to go
+  through. The shelf's app (not sandboxed) makes each alias and passes its bytes in the domain's
+  `userInfo`; the extension serves them as the item's contents, with the alias type and creator.
+  The root asks for everything to stay downloaded, so no cloud shows.
+- **Two traps found on the way.** The raw bookmark data is not an alias file: Finder's writer adds
+  its own header, so the app writes each alias to a temporary file and reads it back. And the
+  system keeps an item's contents until told its version changed: the item's content version is a
+  fingerprint of its alias bytes, and the sync anchor carries a fingerprint of all of them.
+- **Consequence accepted by Egildo**: an alias follows its folder when it is moved or renamed.

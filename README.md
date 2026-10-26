@@ -8,7 +8,7 @@ Named for type founding: a letter's punch is cut once in steel and struck into e
 
 ## Status
 
-Written looks work: `read`, `strike` and `clear`, checked on scratch folders and by eye in Finder; comments joined them in 0.2.0, files in 0.3.0. Badges do not yet: the extension still draws one test badge on any folder named `lean-a` under your home, and the feed file that will drive it is not written. The first feature's spec, plan and tasks are in [specs/001-punch-and-strike](specs/001-punch-and-strike/spec.md); comments and `--live` are in [specs/002-live-comments](specs/002-live-comments/spec.md), files in [specs/003-files-wear-tags](specs/003-files-wear-tags/spec.md); what was measured is in the dated notes under [notes/](notes/).
+Written looks work: `read`, `strike` and `clear`, checked on scratch folders and by eye in Finder; comments joined them in 0.2.0, files in 0.3.0. Shelves work too: sidebar rows of links, each with its own SF Symbol. Badges do not yet: the extension still draws one test badge on any folder named `lean-a` under your home, and the feed file that will drive it is not written. The first feature's spec, plan and tasks are in [specs/001-punch-and-strike](specs/001-punch-and-strike/spec.md); comments and `--live` are in [specs/002-live-comments](specs/002-live-comments/spec.md), files in [specs/003-files-wear-tags](specs/003-files-wear-tags/spec.md), shelves in [specs/004-shelves](specs/004-shelves/spec.md); what was measured is in the dated notes under [notes/](notes/).
 
 ## The punch
 
@@ -53,12 +53,35 @@ Files wear looks too: a regular file can wear tags (Finder shows the colour's do
 
 A custom icon is a hidden `Icon\r` file inside the folder. In a git repository it shows up as untracked; add `Icon?` to your global gitignore.
 
+## Shelves
+
+A **shelf** is a row in Finder's sidebar, beside iCloud Drive and OneDrive, with its own name and SF Symbol, holding Finder aliases of folders and files that stay where they are. A punch declares shelves; nothing is written on the items a shelf links to.
+
+```json5
+// ~/.config/punchr/client.json5
+{
+  shelves: {
+    clients: { name: 'Clients', symbol: 'person.2' }, // the key, clients, is never renamed
+  },
+}
+```
+
+```
+punchr shelve <punch> <shelf> <item>... [--force]     put folders and files on a shelf; sets the shelf up the first time
+punchr unshelve <punch> <shelf> <item>... [--force]   take them off
+punchr shelves [--refresh | --tidy] [--force]         list every shelf and its links
+```
+
+Like `strike`, both show a plan and ask first. The first time a shelf is set up, Finder shows a banner inside its row: click **Enable** once. After that, changes appear in an open Finder window within a second, and a file dropped onto a shelf bounces back. An alias follows its folder when the folder is moved or renamed; `punchr shelves` marks a link whose target is gone as `missing`. Pick symbol names from Apple's SF Symbols app; punchr cannot check them.
+
+Each shelf is a small app that punchr makes from a template inside Punchr.app and keeps in `~/Library/Application Support/punchr/Shelves/`: macOS takes a sidebar row's symbol from an app's extension, so one symbol per row means one app per shelf. After `brew upgrade punchr`, run `punchr shelves --refresh` to rebuild them; they stay enabled. `punchr shelves --tidy` removes the shelves no punch declares any more. macOS keeps an empty 32 KB folder per removed shelf in `~/Library/Containers/local.punchr.shelf.*`, which Finder can move to the Bin.
+
 ## Build
 
 Needs macOS 26 (Tahoe) and the Command Line Tools; no Xcode, no developer account.
 
 ```sh
-./build.sh            # builds build/Punchr.app, ad-hoc signed, the extension sandboxed; build/punchr is the command
+./build.sh            # builds build/Punchr.app, ad-hoc signed, the extensions sandboxed, the shelf template inside; build/punchr is the command
 ./build.sh check      # also runs the checks, in a temporary folder
 ./build.sh register   # also registers it with Launch Services and PlugInKit
 ```

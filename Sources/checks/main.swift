@@ -177,7 +177,10 @@ check("own-the-comment-whole, write-the-comment-through-finder") {
   _ = try strike([f], p, "zente")
   let shown = try finderComment(f)
   try expect(shown == "Zente \"client\" \\ caffè\ntwo", "Finder shows \(shown)")
-  try expect(fm.fileExists(atPath: "\(root)/.DS_Store"), "no .DS_Store: not written through Finder")
+  // Finder writes its .DS_Store when it gets round to it, not at once.
+  let deadline = Date().addingTimeInterval(5)
+  while !fm.fileExists(atPath: "\(root)/.DS_Store") && Date() < deadline { usleep(100_000) }
+  try expect(fm.fileExists(atPath: "\(root)/.DS_Store"), "no .DS_Store within 5 s: not written through Finder")
 }
 
 check("live-owns-only-comments") {
@@ -287,6 +290,94 @@ check("clear-one-keeps-the-others") {
     try expect(st.st_nlink == 2 && readDress(f).icon, "\(f): links \(st.st_nlink)")
   }
   try expect(try !readDress(folders[0]).icon, "the cleared folder kept its icon")
+}
+
+check("punch-declares-shelves") {
+  let ok = try punch("shelved", "{ shelves: { clients: { name: 'Clients', symbol: 'person.2' } } }")
+  try expect(ok.looks.isEmpty && ok.shelves["clients"] == ShelfDecl(key: "clients", name: "Clients", symbol: "person.2"),
+             "shelves \(ok.shelves)")
+  do {
+    _ = try punch("bad-shelves", "{ shelves: { Bad_Key: { name: 'a/b', symbol: 'person 2', colour: 'red' }, ok: { symbol: 'star' } } }")
+    throw CheckFailed(description: "accepted")
+  } catch let r as Refused {
+    let at = r.problems.map(\.at).sorted()
+    try expect(at == ["shelves.Bad_Key", "shelves.Bad_Key.colour", "shelves.Bad_Key.name", "shelves.Bad_Key.symbol", "shelves.ok.name"],
+               "problems at \(at)")
+  }
+}
+
+check("link names, identifiers and changes") {
+  let names = shelfLinks(["/a/docs", "/b/docs", "/c/x", "/d/docs"]).map(\.name)
+  try expect(names == ["docs", "docs 2", "x", "docs 3"], "names \(names)")
+  try expect(shelfLinks(["/b/docs", "/c/x"]).map(\.target) == ["/b/docs", "/c/x"], "identifiers moved")
+  let before = ["/a/docs", "/b/docs", "/c/x"], after = ["/b/docs", "/c/x", "/e/y"]
+  try expect(targets(fromAnchor: anchorData(before)) == before, "the anchor does not carry the list")
+  try expect(targets(fromAnchor: anchorData(before, stamp: "ab12")) == before && stamp(fromAnchor: anchorData(before, stamp: "ab12")) == "ab12",
+             "the anchor does not carry the stamp")
+  let changes = linkChanges(from: before, to: after)
+  try expect(changes.removed == ["/a/docs"] && changes.changed.map(\.target) == ["/b/docs", "/e/y"], "changes \(changes)")
+  try expect(changes.changed.first?.name == "docs", "a suffix did not move back")
+  let none = linkChanges(from: after, to: after)
+  try expect(none.changed.isEmpty && none.removed.isEmpty, "no change reports \(none)")
+}
+
+check("a-shelf-owns-no-attributes") {
+  let p = try punch("shelved", "{ shelves: { clients: { name: 'Clients', symbol: 'person.2' } } }")
+  let items = (1...3).map { folder("item\($0)") }
+  let before = try items.map(attrs), inside = try items.map { try fm.contentsOfDirectory(atPath: $0) }
+  let shelves = URL(fileURLWithPath: "\(root)/Shelves")
+  let plan = planShelve(p, p.shelves["clients"]!, items + [items[0]], in: shelves)
+  try expect(plan.setUp && plan.after == items && plan.error == nil, "plan \(plan.after) \(String(describing: plan.error))")
+  try expect(try items.map(attrs) == before && items.map { try fm.contentsOfDirectory(atPath: $0) } == inside,
+             "planning touched an item")
+  // The generated app, without signing or registering it.
+  let template = URL(fileURLWithPath: "build/Punchr.app/Contents/Resources/Shelf.app")
+  try makeShelfApp("client", p.shelves["clients"]!, template: template, at: plan.app)
+  let info = NSDictionary(contentsOf: plan.app.appendingPathComponent("Contents/Info.plist"))!
+  let ext = NSDictionary(contentsOf: plan.app.appendingPathComponent("Contents/PlugIns/ShelfProvider.appex/Contents/Info.plist"))!
+  try expect(info["CFBundleIdentifier"] as? String == "local.punchr.shelf.client.clients" && info["CFBundleName"] as? String == "Clients",
+             "app \(info)")
+  try expect(ext["CFBundleIdentifier"] as? String == "local.punchr.shelf.client.clients.provider", "extension id")
+  try expect(ext.value(forKeyPath: "CFBundleIcons.CFBundlePrimaryIcon.CFBundleSymbolName") as? String == "person.2", "symbol")
+  try expect(ext.value(forKeyPath: "NSExtension.NSExtensionFileProviderDocumentGroup") as? String == "group.local.punchr.shelf.client.clients",
+             "group")
+  let ents = try PropertyListSerialization.propertyList(from: shelfEntitlements("group.x", sandboxed: true), format: nil) as! [String: Any]
+  try expect(ents["com.apple.security.app-sandbox"] as? Bool == true && ents["com.apple.security.application-groups"] as? [String] == ["group.x"],
+             "entitlements \(ents)")
+  try expect(shelfIDs("my punch", "k").app == "local.punchr.shelf.my-punch.k" && shelfIDs("my punch", "k").domain == "my punch.k",
+             "identifiers")
+}
+
+check("shelve and unshelve plans") {
+  let before = ["/a/zente", "/a/acme"]
+  try expect(shelved(before, ["/a/acme", "/a/old", "/a/old"]) == ["/a/zente", "/a/acme", "/a/old"], "shelving")
+  try expect(shelved(before, ["/a/zente"]) == before, "shelving an item already on the shelf changed it")
+  try expect(unshelved(before, ["/a/acme"]) == ["/a/zente"], "unshelving")
+  try expect(unshelved(before, ["/a/nope"]) == before, "unshelving an item not on the shelf changed it")
+  try expect(unshelved(before, ["/a/x/../acme"]) == ["/a/zente"], "a path with .. not folded")
+}
+
+check("read-a-shelf: the listing finds its punch") {
+  let p = try punch("listed", "{ shelves: { clients: { name: 'Listed', symbol: 'person.2' } } }")
+  let shelves = URL(fileURLWithPath: "\(root)/Listed")
+  let template = URL(fileURLWithPath: "build/Punchr.app/Contents/Resources/Shelf.app")
+  try makeShelfApp(p.name, p.shelves["clients"]!, punchFile: p.file, template: template, at: shelfApp(p.shelves["clients"]!, in: shelves))
+  let l = listShelves(in: shelves)
+  try expect(l.count == 1 && l[0].name == "Listed" && l[0].symbol == "person.2" && l[0].key == "clients" && l[0].punch == "listed",
+             "listing \(l)")
+  try expect(l[0].declared, "its punch's shelf not found")
+  try "{ shelves: {} }".write(toFile: p.file, atomically: true, encoding: .utf8)
+  try expect(!listShelves(in: shelves)[0].declared, "a shelf the punch dropped still reads as declared")
+  try expect(l[0].error != nil, "an unregistered shelf reported no problem") // never registered: the system has none
+}
+
+check("shelves-survive-a-rebuild: refresh takes the punch's current name and symbol") {
+  let p = try punch("refreshed", "{ shelves: { k: { name: 'Before', symbol: 'star' } } }")
+  let l = ShelfListing(app: URL(fileURLWithPath: "/nowhere.app"), punch: p.name, punchFile: p.file, key: "k", name: "Before", symbol: "star")
+  try "{ shelves: { k: { name: 'After', symbol: 'person.2' } } }".write(toFile: p.file, atomically: true, encoding: .utf8)
+  try expect(currentDecl(l) == ShelfDecl(key: "k", name: "After", symbol: "person.2"), "\(currentDecl(l))")
+  try fm.removeItem(atPath: p.file)
+  try expect(currentDecl(l) == ShelfDecl(key: "k", name: "Before", symbol: "star"), "without its punch: \(currentDecl(l))")
 }
 
 try? fm.removeItem(atPath: root)

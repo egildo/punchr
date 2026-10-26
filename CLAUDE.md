@@ -2,11 +2,11 @@
 
 Swift, built with the Command Line Tools only (`./build.sh`, no Xcode). Read `README.md`, then the dated notes under `notes/`.
 
-Work is specified with Spec Kit (the `/speckit-*` skills): the engineering constitution is `.specify/memory/constitution.md` (still the blank template), and each feature gets its spec, plan and tasks under `specs/NNN-*/`.
+Work is specified with Spec Kit (the `/speckit-*` skills): the engineering constitution is `.specify/memory/constitution.md`, and each feature gets its spec, plan and tasks under `specs/NNN-*/`.
 
 ## Working rules
 
-- Test badges and written looks on scratch folders only. Registering the extension, enabling it and restarting Finder touch the real Finder: ask Egildo first, each time.
+- Test badges, written looks and shelves on scratch folders only. Registering an extension or a shelf, enabling it and restarting Finder touch the real Finder: ask Egildo first, each time. Remove test shelves with `punchr shelves --tidy` after a test.
 - Gate before a merge: `./build.sh` builds clean and `./build.sh check` passes.
 - Rounds go on a branch named `<topic>-round`, merged into `main` with a merge commit (`--no-ff`), the branch deleted after.
 - Commit messages end with the model's `Co-Authored-By: Claude … <noreply@anthropic.com>` line.
